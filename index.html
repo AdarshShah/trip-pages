@@ -1,910 +1,482 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adarsh & Himu: The Munnar-Alleppey Expedition</title>
+    <title>My Apps</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;800&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        serif: ['Playfair Display', 'serif'],
-                        header: ['Montserrat', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
     <style>
-        /* ── ANIMATIONS ── */
-        @keyframes float {
-            0%,100% { transform: translateY(0) rotate(0deg); }
-            33%      { transform: translateY(-14px) rotate(4deg); }
-            66%      { transform: translateY(-7px) rotate(-3deg); }
+        :root {
+            --bg: #0c0f14;
+            --surface: rgba(255,255,255,0.045);
+            --surface-hover: rgba(255,255,255,0.085);
+            --border: rgba(255,255,255,0.08);
+            --border-hover: rgba(255,255,255,0.18);
+            --text-primary: #f0ede8;
+            --text-secondary: rgba(240,237,232,0.45);
+            --text-tertiary: rgba(240,237,232,0.25);
+            --glow: rgba(255,255,255,0.04);
+            --toast-bg: rgba(20,24,32,0.96);
+            --toggle-bg: rgba(255,255,255,0.07);
+            --toggle-icon: #f0ede8;
         }
-        @keyframes slideInRight {
-            from { opacity:0; transform:translateX(24px); }
-            to   { opacity:1; transform:translateX(0); }
+        [data-theme="light"] {
+            --bg: #f2efe9;
+            --surface: rgba(255,255,255,0.72);
+            --surface-hover: rgba(255,255,255,0.95);
+            --border: rgba(0,0,0,0.07);
+            --border-hover: rgba(0,0,0,0.15);
+            --text-primary: #1a1814;
+            --text-secondary: rgba(26,24,20,0.45);
+            --text-tertiary: rgba(26,24,20,0.25);
+            --glow: rgba(0,0,0,0.03);
+            --toast-bg: rgba(26,24,20,0.94);
+            --toggle-bg: rgba(0,0,0,0.07);
+            --toggle-icon: #1a1814;
         }
-        @keyframes slideInUp {
-            from { opacity:0; transform:translateY(16px); }
-            to   { opacity:1; transform:translateY(0); }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        /* ── Animated background ── */
+        .bg-scene {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        [data-theme="dark"] .bg-scene {
+            background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(16,32,24,0.9) 0%, transparent 70%),
+                        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(10,18,32,0.8) 0%, transparent 65%),
+                        linear-gradient(160deg, #090c10 0%, #0c1118 40%, #0a0e0c 100%);
+        }
+        [data-theme="light"] .bg-scene {
+            background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(225,235,225,0.9) 0%, transparent 70%),
+                        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(215,225,240,0.8) 0%, transparent 65%),
+                        linear-gradient(160deg, #ede9e3 0%, #f2efe9 50%, #eae8e3 100%);
+        }
+
+        /* Grain overlay */
+        .bg-scene::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0.032;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-size: 128px 128px;
+        }
+
+        /* Floating orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            animation: driftOrb var(--dur, 18s) ease-in-out infinite alternate;
+            opacity: 0;
+        }
+        [data-theme="dark"] .orb { opacity: var(--op, 0.18); }
+        [data-theme="light"] .orb { opacity: var(--op, 0.22); filter: blur(110px); }
+
+        @keyframes driftOrb {
+            0%   { transform: translate(0, 0) scale(1); }
+            33%  { transform: translate(var(--dx1, 40px), var(--dy1, -30px)) scale(1.08); }
+            66%  { transform: translate(var(--dx2, -20px), var(--dy2, 20px)) scale(0.94); }
+            100% { transform: translate(var(--dx3, 30px), var(--dy3, 10px)) scale(1.04); }
+        }
+
+        /* ── Layout ── */
+        .page-wrap {
+            position: relative;
+            z-index: 1;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* ── Theme toggle ── */
+        .theme-toggle {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--toggle-bg);
+            color: var(--toggle-icon);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+            backdrop-filter: blur(12px);
+        }
+        .theme-toggle:hover { background: var(--surface-hover); transform: scale(1.08); }
+        .theme-toggle:active { transform: scale(0.93); }
+
+        /* ── Header ── */
+        .header {
+            padding-top: 72px;
+            padding-bottom: 48px;
+        }
+        .header-eyebrow {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: 10px;
+            animation: fadeSlideUp 0.7s ease both;
+        }
+        .header-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(52px, 10vw, 76px);
+            font-weight: 600;
+            line-height: 0.92;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            animation: fadeSlideUp 0.7s ease 0.08s both;
+        }
+        .header-title em {
+            font-style: italic;
+            font-weight: 400;
+        }
+        .header-sub {
+            margin-top: 14px;
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            letter-spacing: 0.01em;
+            animation: fadeSlideUp 0.7s ease 0.16s both;
+        }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-tertiary);
+            margin-bottom: 16px;
+            animation: fadeSlideUp 0.7s ease 0.22s both;
+        }
+
+        /* ── App grid ── */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+        @media (min-width: 520px) {
+            .app-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* ── App card ── */
+        .app-card {
+            position: relative;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            padding: 22px 18px 20px;
+            cursor: pointer;
+            transition: transform 0.22s cubic-bezier(.34,1.3,.64,1),
+                        box-shadow 0.22s ease,
+                        border-color 0.22s ease,
+                        background 0.22s ease;
+            animation: fadeSlideUp 0.6s ease both;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .app-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: var(--glow);
+            opacity: 0;
+            transition: opacity 0.22s ease;
+        }
+        .app-card:hover {
+            transform: translateY(-5px) scale(1.015);
+            border-color: var(--border-hover);
+            background: var(--surface-hover);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .app-card:hover::before { opacity: 1; }
+        .app-card:active { transform: translateY(-2px) scale(0.985); }
+
+        /* Card badge */
+        .card-badge {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 100px;
+        }
+        .card-badge.live {
+            background: rgba(52,211,153,0.12);
+            color: #34d399;
+            border: 1px solid rgba(52,211,153,0.25);
+        }
+        .card-badge.soon {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        /* Icon wrapper */
+        .card-icon-wrap {
+            width: 58px;
+            height: 58px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #fff;
+            margin-bottom: 16px;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+            transition: transform 0.22s ease, box-shadow 0.22s ease;
+        }
+        .app-card:hover .card-icon-wrap {
+            transform: scale(1.06) rotate(-2deg);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+        }
+        .card-icon-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(145deg, rgba(255,255,255,0.22) 0%, transparent 60%);
+        }
+
+        /* Muted icon (coming soon) */
+        .card-icon-wrap.muted {
+            background: rgba(255,255,255,0.06) !important;
+            box-shadow: none;
+            color: var(--text-tertiary);
+            font-size: 20px;
+        }
+        [data-theme="light"] .card-icon-wrap.muted {
+            background: rgba(0,0,0,0.06) !important;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            margin-bottom: 3px;
+        }
+        .card-sub {
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            letter-spacing: 0.01em;
+        }
+        .app-card.dimmed .card-title { color: var(--text-secondary); }
+        .app-card.dimmed .card-sub   { color: var(--text-tertiary); }
+
+        /* Divider line */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+            margin: 40px 0 32px;
+            animation: fadeIn 0.8s ease 0.4s both;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--toast-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-hover);
+            border-radius: 100px;
+            padding: 12px 22px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            z-index: 999;
+            white-space: nowrap;
+            transition: transform 0.35s cubic-bezier(.34,1.4,.64,1), opacity 0.3s ease;
+            opacity: 0;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 12px 36px rgba(0,0,0,0.3);
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* ── Animations ── */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes fadeIn {
-            from { opacity:0; } to { opacity:1; }
+            from { opacity: 0; } to { opacity: 1; }
         }
-        @keyframes shimmer {
-            0%   { background-position: -200% center; }
-            100% { background-position:  200% center; }
-        }
-        @keyframes ripple {
-            0%   { transform:scale(1);   opacity:.7; }
-            100% { transform:scale(2.6); opacity:0; }
-        }
-        @keyframes spinRing {
-            to { transform:rotate(360deg); }
-        }
-        @keyframes glowPulse {
-            0%,100% { box-shadow: 0 0 20px rgba(251,191,36,.35); }
-            50%      { box-shadow: 0 0 44px rgba(251,191,36,.70); }
-        }
-        @keyframes drawLine {
-            from { transform: scaleY(0); }
-            to   { transform: scaleY(1); }
-        }
-        @keyframes bounceDot {
-            0%,80%,100% { transform:translateY(0); }
-            40%         { transform:translateY(-6px); }
-        }
-
-        /* ── BASE ── */
-        body {
-            background: linear-gradient(160deg, #e8f5e9 0%, #f1f8e9 40%, #f4f7f5 100%);
-            background-attachment: fixed;
-        }
-
-        /* ── LOADING ── */
-        .loading-overlay {
-            position:fixed; inset:0; z-index:1000;
-            background: linear-gradient(145deg, #1a4731 0%, #2d7a4d 60%, #00695c 100%);
-            display:flex; align-items:center; justify-content:center;
-            transition: opacity .5s ease;
-        }
-        .loader-ring {
-            width:56px; height:56px;
-            border:3px solid rgba(255,255,255,.18);
-            border-top-color:#fff;
-            border-radius:50%;
-            animation: spinRing .75s linear infinite;
-        }
-        .bounce-dot { animation: bounceDot 1.2s ease-in-out infinite; }
-
-        /* ── GLASS ── */
-        .glass-card {
-            background: rgba(255,255,255,.97);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(45,122,77,.12);
-            box-shadow: 0 4px 28px rgba(45,122,77,.09);
-        }
-
-        /* ── HERO ── */
-        .hero-bg {
-            background: linear-gradient(160deg, #183d28 0%, #2d7a4d 45%, #00695c 75%, #004d40 100%);
-        }
-        .hero-sun {
-            position:absolute; top:22px; right:28px;
-            width:56px; height:56px;
-            background: radial-gradient(circle, rgba(251,191,36,.95) 0%, rgba(245,158,11,.55) 45%, transparent 72%);
-            border-radius:50%;
-            animation: glowPulse 2.8s ease-in-out infinite;
-        }
-        .floating-leaf {
-            position:absolute; opacity:.22;
-            animation: float var(--dur,5s) ease-in-out infinite;
-            animation-delay: var(--del,0s);
-            user-select:none; pointer-events:none;
-        }
-
-        /* ── COUNTDOWN ── */
-        .cd-box {
-            background: linear-gradient(145deg, #1d5032, #2d7a4d);
-            border-radius:14px; padding:10px 16px;
-            color:#fff; position:relative; overflow:hidden;
-            box-shadow: 0 4px 14px rgba(29,80,50,.3);
-        }
-        .cd-box::after {
-            content:''; position:absolute; top:0; left:-120%;
-            width:60%; height:100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent);
-            animation: shimmer 3.2s ease-in-out infinite;
-        }
-        .cd-box.cd-accent { background: linear-gradient(145deg, #b45309, #f59e0b); }
-
-        /* ── TIMELINE ── */
-        .timeline-track {
-            position:absolute; left:24px; top:0; bottom:0; width:2px;
-            background: linear-gradient(to bottom, transparent, #2d7a4d55, #2d7a4d88, #2d7a4d55, transparent);
-            transform-origin:top;
-            animation: drawLine 1.4s cubic-bezier(.4,0,.2,1) forwards;
-        }
-        .timeline-card {
-            opacity:0;
-            animation: slideInRight .45s ease-out forwards;
-            transition: transform .22s ease;
-        }
-        .timeline-card:hover { transform: translateX(4px); }
-
-        /* ── DAY SEPARATOR ── */
-        .day-sep {
-            display:flex; align-items:center; gap:10px;
-            padding: 6px 0 14px 64px;
-            opacity:0; animation: fadeIn .5s ease forwards;
-        }
-        .day-badge {
-            background: linear-gradient(135deg, #2d7a4d, #00695c);
-            color:#fff; font-size:9px; font-weight:800;
-            letter-spacing:.14em; text-transform:uppercase;
-            padding:4px 12px; border-radius:100px;
-            white-space:nowrap; flex-shrink:0;
-            box-shadow: 0 2px 8px rgba(45,122,77,.35);
-        }
-        .day-line { flex:1; height:1px; background: linear-gradient(to right, #2d7a4d33, transparent); }
-
-        /* ── BUDGET ── */
-        .budget-card {
-            background: linear-gradient(135deg, rgba(45,122,77,.05), rgba(0,105,92,.09));
-            border:1px solid rgba(45,122,77,.13);
-        }
-
-        /* ── MODAL ── */
-        #add-form-modal {
-            display:none;
-            background: rgba(0,0,0,.6);
-            backdrop-filter: blur(4px);
-        }
-        .modal-sheet {
-            animation: slideInUp .28s cubic-bezier(.34,1.56,.64,1) forwards;
-        }
-
-        /* ── FAB ── */
-        .fab {
-            position:fixed; bottom:24px; right:24px;
-            width:56px; height:56px;
-            background: linear-gradient(135deg, #2d7a4d, #00695c);
-            border-radius:50%; border:none; color:#fff; font-size:20px;
-            display:flex; align-items:center; justify-content:center;
-            cursor:pointer; z-index:80;
-            box-shadow: 0 8px 24px rgba(45,122,77,.45);
-            transition: transform .2s, box-shadow .2s;
-        }
-        .fab::before {
-            content:''; position:absolute; inset:0; border-radius:50%;
-            background:inherit; animation: ripple 2.2s ease-out infinite;
-        }
-        .fab:hover { transform:scale(1.1); box-shadow:0 12px 36px rgba(45,122,77,.55); }
-        .fab:active { transform:scale(.94); }
-
-        /* ── STEP FORM ── */
-        @keyframes stepIn {
-            from { opacity:0; transform:translateX(18px); }
-            to   { opacity:1; transform:translateX(0); }
-        }
-        @keyframes stepInBack {
-            from { opacity:0; transform:translateX(-18px); }
-            to   { opacity:1; transform:translateX(0); }
-        }
-        .step-panel { display:none; }
-        .step-panel.active { display:block; animation: stepIn .22s ease forwards; }
-        .step-panel.active.from-back { animation: stepInBack .22s ease forwards; }
-        .step-dot { transition: width .25s ease, background .25s ease; border-radius:9999px; height:6px; }
-
-        /* ── MISC ── */
-        .text-shadow { text-shadow: 0 2px 16px rgba(0,0,0,.4); }
-        .input-focus { transition: border-color .2s, box-shadow .2s; }
-        .input-focus:focus { border-color:#2d7a4d; box-shadow: 0 0 0 3px rgba(45,122,77,.12); outline:none; }
     </style>
 </head>
-<body class="font-sans text-gray-800 flex flex-col items-center p-0 sm:p-4 min-h-screen relative">
+<body>
 
-    <!-- ═══ LOADING SCREEN ═══ -->
-    <div id="loading-screen" class="loading-overlay">
-        <div class="text-center">
-            <div class="loader-ring mx-auto mb-5"></div>
-            <p class="text-[11px] font-bold text-white/70 uppercase tracking-[.22em] mb-3">Loading your expedition…</p>
-            <div class="flex justify-center space-x-1.5">
-                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:0s"></span>
-                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:.18s"></span>
-                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:.36s"></span>
-            </div>
-        </div>
+    <!-- Background scene -->
+    <div class="bg-scene">
+        <div class="orb" style="width:500px;height:500px;top:-100px;left:-150px;background:radial-gradient(circle,#1a4731,transparent);--dur:22s;--op:0.22;--dx1:60px;--dy1:-40px;--dx2:-30px;--dy2:50px;--dx3:45px;--dy3:-20px;"></div>
+        <div class="orb" style="width:400px;height:400px;bottom:-80px;right:-100px;background:radial-gradient(circle,#0a2540,transparent);--dur:26s;--op:0.18;--dx1:-50px;--dy1:30px;--dx2:40px;--dy2:-60px;--dx3:-25px;--dy3:45px;"></div>
+        <div class="orb" style="width:280px;height:280px;top:40%;left:50%;background:radial-gradient(circle,#1e1a0e,transparent);--dur:19s;--op:0.12;--dx1:30px;--dy1:50px;--dx2:-60px;--dy2:-20px;--dx3:20px;--dy3:60px;"></div>
     </div>
 
-    <!-- ═══ ADD EVENT MODAL ═══ -->
-    <div id="add-form-modal" class="fixed inset-0 z-[100] items-center justify-center p-4" onclick="handleModalBackdrop(event)">
-        <div class="modal-sheet glass-card w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" id="modal-inner">
+    <!-- Theme toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <i class="fa-solid fa-circle-half-stroke" id="theme-icon"></i>
+    </button>
 
-            <!-- Step Header -->
-            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(135deg,#f0fdf4,#fff);">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.18em] mb-0.5" id="step-label">Step 1 of 4</p>
-                        <h2 class="text-lg font-serif" style="color:#1d5032" id="step-title">Category &amp; Time</h2>
-                    </div>
-                    <button onclick="closeModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shadow-sm">
-                        <i class="fa-solid fa-times text-sm"></i>
-                    </button>
-                </div>
-                <!-- Progress bar -->
-                <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-                    <div id="step-progress" class="h-full rounded-full transition-all duration-300" style="background:linear-gradient(90deg,#2d7a4d,#00695c);width:25%;"></div>
-                </div>
-                <!-- Step dots -->
-                <div class="flex justify-center gap-2">
-                    <div class="step-dot" data-step="1" style="width:20px;background:#2d7a4d;"></div>
-                    <div class="step-dot" data-step="2" style="width:6px;background:#e5e7eb;"></div>
-                    <div class="step-dot" data-step="3" style="width:6px;background:#e5e7eb;"></div>
-                    <div class="step-dot" data-step="4" style="width:6px;background:#e5e7eb;"></div>
-                </div>
-            </div>
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
 
-            <!-- Form -->
-            <form id="event-form" class="px-6 pb-6">
+    <div class="page-wrap">
 
-                <!-- Step 1: Category & Time -->
-                <div class="step-panel active" data-step="1">
-                    <div class="space-y-4 py-5">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
-                            <select id="form-category" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                                <option value="Transport">🚌  Transport</option>
-                                <option value="Accommodation">🏨  Accommodation</option>
-                                <option value="Food">🍛  Food</option>
-                                <option value="Experiences">📸  Experiences</option>
-                                <option value="Miscellaneous">🧾  Miscellaneous</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Date</label>
-                                <input type="date" id="form-date" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Time</label>
-                                <input type="time" id="form-time" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Event Info -->
-                <div class="step-panel" data-step="2">
-                    <div class="space-y-4 py-5">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Title <span class="text-red-400 normal-case font-normal">*required</span></label>
-                            <input type="text" id="form-title" placeholder="e.g., Tea Museum Visit" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                            <input type="text" id="form-detail" placeholder="e.g., KSRTC Fast Passenger" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Location & Notes -->
-                <div class="step-panel" data-step="3">
-                    <div class="space-y-4 py-5">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Location <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                            <input type="text" id="form-location" placeholder="Address or Google Maps link" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Notes <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                            <textarea id="form-comments" placeholder="Extra details…" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus resize-none" rows="3"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Budget & Tips -->
-                <div class="step-panel" data-step="4">
-                    <div class="space-y-4 py-5">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Cost ₹ <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
-                                <input type="number" id="form-cost" placeholder="0" min="0" step="0.01" class="w-full pl-7 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Pro Tip <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                            <input type="text" id="form-tip" placeholder="e.g., Best views on the right side!" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Navigation -->
-                <div class="flex gap-3 pt-2 border-t border-gray-100">
-                    <button type="button" id="btn-back" onclick="stepBack()"
-                            class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-                            style="display:none;">
-                        <i class="fa-solid fa-arrow-left text-sm"></i>
-                    </button>
-                    <button type="button" id="btn-next" onclick="stepNext()"
-                            class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95 shadow-md"
-                            style="background:linear-gradient(135deg,#2d7a4d,#00695c);">
-                        Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ═══ MAIN CONTAINER ═══ -->
-    <div class="w-full max-w-md bg-white relative overflow-hidden sm:rounded-3xl flex flex-col min-h-screen sm:min-h-0"
-         style="box-shadow:0 30px 90px rgba(0,0,0,.18);">
-
-        <!-- ── HERO HEADER ── -->
-        <header class="hero-bg relative w-full overflow-hidden" style="height:288px;">
-
-            <!-- Sun -->
-            <div class="hero-sun"></div>
-
-            <!-- Floating flora -->
-            <div class="floating-leaf" style="top:12%;left:7%;font-size:22px;--dur:5.2s;--del:0s">🌿</div>
-            <div class="floating-leaf" style="top:28%;right:14%;font-size:16px;--dur:6.4s;--del:1.1s">🍃</div>
-            <div class="floating-leaf" style="top:55%;left:18%;font-size:13px;--dur:4.8s;--del:2.3s">🌱</div>
-            <div class="floating-leaf" style="top:38%;right:6%;font-size:18px;--dur:7.1s;--del:.6s">🌿</div>
-            <div class="floating-leaf" style="top:68%;left:4%;font-size:11px;--dur:5.6s;--del:1.8s">🍃</div>
-            <div class="floating-leaf" style="top:18%;left:42%;font-size:12px;--dur:6.0s;--del:3.0s">🌸</div>
-
-            <!-- Dot grid overlay -->
-            <div class="absolute inset-0 pointer-events-none"
-                 style="background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.06) 1px,transparent 0);background-size:26px 26px;"></div>
-
-            <!-- Mountain silhouette SVG -->
-            <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 400 80" preserveAspectRatio="none">
-                <path d="M0 80 L0 52 L45 28 L85 46 L125 14 L165 38 L205 6 L245 32 L285 18 L325 40 L365 22 L400 36 L400 80 Z"
-                      fill="rgba(255,255,255,.05)"/>
-                <path d="M0 80 L0 62 L55 40 L100 56 L140 32 L180 50 L220 24 L260 46 L300 34 L345 54 L385 36 L400 48 L400 80 Z"
-                      fill="rgba(255,255,255,.08)"/>
-                <path d="M0 80 L0 72 L80 58 L160 68 L240 54 L320 66 L400 58 L400 80 Z"
-                      fill="rgba(255,255,255,.05)"/>
-            </svg>
-
-            <!-- Tea fields silhouette -->
-            <div class="absolute bottom-0 left-0 w-full h-14 pointer-events-none"
-                 style="background:linear-gradient(to top, rgba(24,61,40,.6), transparent);"></div>
-
-            <!-- Content -->
-            <div class="absolute bottom-0 left-0 w-full px-8 pb-9 z-10">
-                <div class="mb-3" style="animation:slideInUp .6s ease-out .1s both">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black tracking-[.15em] uppercase shadow-lg"
-                          style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a0a00;">
-                        ✦ The Munnar-Alleppey Expedition ✦
-                    </span>
-                </div>
-                <h1 class="text-[42px] font-serif text-white leading-none mb-2 text-shadow"
-                    style="animation:slideInUp .6s ease-out .22s both;">Kerala Trip</h1>
-                <p class="text-white/80 font-medium tracking-wide flex items-center text-sm"
-                   style="animation:slideInUp .6s ease-out .34s both;">
-                    Adarsh
-                    <span class="mx-2 inline-flex items-center justify-center w-5 h-5 rounded-full"
-                          style="background:rgba(239,68,68,.25);">
-                        <i class="fa-solid fa-heart text-red-400" style="font-size:8px;"></i>
-                    </span>
-                    Himu
-                </p>
-            </div>
-        </header>
-
-        <!-- ── COUNTDOWN ── -->
-        <div class="px-5 -mt-10 relative z-20">
-            <div class="glass-card rounded-2xl p-5">
-                <p class="text-center text-[9px] font-black text-gray-400 uppercase tracking-[.22em] mb-4">
-                    <i class="fa-regular fa-clock mr-1.5 text-green-600"></i>Trip Begins In
-                </p>
-                <div class="flex justify-center items-center gap-2 mb-4">
-                    <div class="cd-box text-center">
-                        <span id="cd-days" class="block text-2xl font-header font-black tabular-nums">00</span>
-                        <span class="text-[8px] font-bold text-white/55 uppercase tracking-widest">Days</span>
-                    </div>
-                    <span class="text-xl font-black text-green-300/50 mb-3">:</span>
-                    <div class="cd-box text-center">
-                        <span id="cd-hours" class="block text-2xl font-header font-black tabular-nums">00</span>
-                        <span class="text-[8px] font-bold text-white/55 uppercase tracking-widest">Hrs</span>
-                    </div>
-                    <span class="text-xl font-black text-green-300/50 mb-3">:</span>
-                    <div class="cd-box text-center">
-                        <span id="cd-minutes" class="block text-2xl font-header font-black tabular-nums">00</span>
-                        <span class="text-[8px] font-bold text-white/55 uppercase tracking-widest">Min</span>
-                    </div>
-                    <span class="text-xl font-black text-green-300/50 mb-3">:</span>
-                    <div class="cd-box cd-accent text-center">
-                        <span id="cd-seconds" class="block text-2xl font-header font-black tabular-nums">00</span>
-                        <span class="text-[8px] font-bold text-white/55 uppercase tracking-widest">Sec</span>
-                    </div>
-                </div>
-                <div id="sync-status" class="flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-3 border-t border-gray-100/80">
-                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400 mr-2 animate-pulse"></span>
-                    <span id="sync-text">Connecting…</span>
-                </div>
-            </div>
+        <!-- Header -->
+        <div class="header">
+            <p class="header-eyebrow">Personal Hub</p>
+            <h1 class="header-title">My <em>Apps</em></h1>
+            <p class="header-sub">Everything in one place — tap to open.</p>
         </div>
 
-        <!-- ── MAIN CONTENT ── -->
-        <main class="flex-1 px-5 py-8">
+        <!-- App grid -->
+        <p class="section-label">Applications</p>
+        <div class="app-grid" id="app-grid"></div>
 
-            <!-- Warnings -->
-            <div id="setup-warning" class="hidden mb-5 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-[11px] font-medium leading-relaxed">
-                <i class="fa-solid fa-screwdriver-wrench mr-1.5"></i>
-                <strong>JSONBin Setup Required:</strong> Replace API keys to enable cloud sync. Running in offline mode.
-            </div>
-            <div id="auth-warning" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-[11px] font-medium leading-relaxed">
-                <i class="fa-solid fa-key mr-1.5"></i>
-                <strong>Auth Error:</strong> The API key is invalid or has insufficient permissions.
-            </div>
+        <div class="section-divider"></div>
 
-            <!-- Financial Overview -->
-            <div class="mb-10 budget-card rounded-3xl p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-[10px] font-black uppercase tracking-[.18em]" style="color:#1d5032cc;">
-                        <i class="fa-solid fa-wallet mr-1.5"></i>Financial Overview
-                    </h2>
-                    <span class="text-[9px] font-bold text-gray-400 bg-white/80 px-2.5 py-1 rounded-lg border border-gray-100">Estimated</span>
-                </div>
-                <div class="grid grid-cols-2 gap-4 items-center">
-                    <div class="h-36 relative">
-                        <canvas id="budget-chart"></canvas>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span class="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Total</span>
-                            <span id="total-cost-center" class="text-base font-black" style="color:#1d5032;">₹0</span>
-                        </div>
-                    </div>
-                    <div id="budget-legend" class="space-y-2"></div>
-                </div>
-                <div class="mt-4 pt-4 flex justify-between items-center" style="border-top:1px solid rgba(45,122,77,.12);">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Grand Total</span>
-                    <span id="total-cost" class="text-xl font-header font-black" style="color:#1d5032;">₹0</span>
-                </div>
-            </div>
+        <!-- Footer -->
+        <p style="font-size:10px;color:var(--text-tertiary);text-align:center;letter-spacing:0.1em;animation:fadeIn 1s ease 0.6s both;">
+            PERSONAL DASHBOARD &nbsp;·&nbsp; v1.0
+        </p>
 
-            <!-- Journey Log -->
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h2 class="text-sm font-black text-gray-700 uppercase tracking-widest">The Journey Log</h2>
-                    <p id="event-count" class="text-[10px] text-gray-400 mt-0.5">0 events planned</p>
-                </div>
-                <button onclick="openModal()"
-                        class="flex items-center text-xs font-bold px-3.5 py-2 rounded-xl transition-all active:scale-95"
-                        style="background:linear-gradient(135deg,#f0f9f1,#dcf1df);color:#1d5032;border:1px solid rgba(45,122,77,.2);">
-                    <i class="fa-solid fa-plus mr-1.5" style="color:#2d7a4d;"></i>Add Event
-                </button>
-            </div>
-
-            <!-- Timeline -->
-            <div class="relative">
-                <div class="timeline-track"></div>
-                <div id="timeline-container" class="space-y-8"></div>
-            </div>
-        </main>
-
-        <!-- ── FOOTER ── -->
-        <footer class="px-6 py-8 text-center border-t border-gray-100"
-                style="background:linear-gradient(180deg,#f9fafb,#f0f9f1);">
-            <div class="flex items-center justify-center gap-2 mb-2">
-                <div class="h-px w-8" style="background:linear-gradient(to right,transparent,#bbe3c3);"></div>
-                <i class="fa-solid fa-leaf text-[10px]" style="color:#2d7a4d;opacity:.5;"></i>
-                <div class="h-px w-8" style="background:linear-gradient(to left,transparent,#bbe3c3);"></div>
-            </div>
-            <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.25em] mb-1">Adventure Companion • v6.2</p>
-            <p class="text-xs text-gray-500 font-medium italic mb-4">Safe Travels, Adarsh &amp; Himu! 🌿</p>
-            <button onclick="fetchData(true)"
-                    class="inline-flex items-center px-5 py-2.5 bg-white rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-green-50 transition-all active:scale-95 shadow-sm"
-                    style="border:1px solid rgba(45,122,77,.25);color:#1d5032;">
-                <i class="fa-solid fa-rotate mr-1.5"></i>Sync Now
-            </button>
-        </footer>
     </div>
-
-    <!-- ── FAB ── -->
-    <button onclick="openModal()" class="fab"><i class="fa-solid fa-plus"></i></button>
 
     <script>
-        // ── CREDENTIALS ──
-        const JSONBIN_API_KEY = 'REDACTED_API_KEY';
-        const JSONBIN_BIN_ID  = '6a041bfec0954111d817454e';
-
-        const isConfigured = JSONBIN_API_KEY !== 'YOUR_JSONBIN_API_KEY' && JSONBIN_BIN_ID !== 'YOUR_BIN_ID';
-        const JSONBIN_URL   = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
-
-        const CAT = {
-            'Transport':     { color:'#2d7a4d', light:'#f0f9f1', icon:'fa-bus',          label:'Transport' },
-            'Accommodation': { color:'#0ea5e9', light:'#f0f9ff', icon:'fa-hotel',         label:'Stay'      },
-            'Food':          { color:'#f59e0b', light:'#fffbeb', icon:'fa-utensils',      label:'Food'      },
-            'Experiences':   { color:'#8b5cf6', light:'#faf5ff', icon:'fa-camera',        label:'Exp.'      },
-            'Miscellaneous': { color:'#64748b', light:'#f8fafc', icon:'fa-receipt',       label:'Misc.'     }
-        };
-
-        let itineraryData = [];
-        let chartInstance  = null;
-        let isSyncing      = false;
-        let activeKeyHeader = 'X-Master-Key';
-
-        // ── HELPERS ──
-        const hideLoading = () => {
-            const el = document.getElementById('loading-screen');
-            if (!el) return;
-            el.style.opacity = '0';
-            setTimeout(() => el.style.display = 'none', 500);
-        };
-
-        const updateStatus = (text, dotCls) => {
-            document.getElementById('sync-text').innerText = text;
-            document.getElementById('sync-dot').className = `w-2 h-2 rounded-full mr-2 ${dotCls}`;
-        };
-
-        // ── INIT ──
-        window.onload = () => {
-            if (!isConfigured) document.getElementById('setup-warning').classList.remove('hidden');
-            fetchData();
-            startCountdown();
-            setupForm();
-            if (isConfigured) setInterval(() => fetchData(false), 15000);
-        };
-
-        // ── FETCH ──
-        window.fetchData = async (manual = false) => {
-            if (isSyncing) return;
-            isSyncing = true;
-            if (manual) updateStatus('Syncing…', 'bg-blue-400 animate-pulse');
-            try {
-                if (!isConfigured) {
-                    const raw = localStorage.getItem('munnar_offline_data');
-                    itineraryData = raw ? JSON.parse(raw) : getDefaultData();
-                    if (!raw) saveDataLocal();
-                    updateStatus('Local Mode', 'bg-amber-500');
-                } else {
-                    let hdrs = { [activeKeyHeader]: JSONBIN_API_KEY };
-                    let res  = await fetch(JSONBIN_URL, { headers: hdrs });
-                    if (res.status === 401) {
-                        activeKeyHeader = activeKeyHeader === 'X-Master-Key' ? 'X-Access-Key' : 'X-Master-Key';
-                        hdrs = { [activeKeyHeader]: JSONBIN_API_KEY };
-                        res  = await fetch(JSONBIN_URL, { headers: hdrs });
-                        if (res.status === 401) {
-                            document.getElementById('auth-warning').classList.remove('hidden');
-                            throw new Error('Invalid API Key.');
-                        }
-                    }
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    document.getElementById('auth-warning').classList.add('hidden');
-                    const data = await res.json();
-                    if (data.record?.itinerary) {
-                        itineraryData = data.record.itinerary;
-                    } else {
-                        itineraryData = getDefaultData();
-                        await pushDataCloud();
-                    }
-                    updateStatus('Cloud Synced', 'bg-emerald-500');
-                }
-            } catch (err) {
-                console.error('Fetch Error:', err);
-                updateStatus('Sync Failed', 'bg-red-500');
-            } finally {
-                isSyncing = false;
-                renderUI();
-                hideLoading();
-            }
-        };
-
-        // ── SAVE ──
-        window.saveData = async () => {
-            if (!isConfigured) { saveDataLocal(); renderUI(); return; }
-            await pushDataCloud();
-            renderUI();
-        };
-
-        const saveDataLocal = () => localStorage.setItem('munnar_offline_data', JSON.stringify(itineraryData));
-
-        const pushDataCloud = async () => {
-            updateStatus('Saving…', 'bg-blue-400 animate-pulse');
-            try {
-                let hdrs = { 'Content-Type': 'application/json', [activeKeyHeader]: JSONBIN_API_KEY };
-                let res  = await fetch(JSONBIN_URL, { method:'PUT', headers:hdrs, body:JSON.stringify({ itinerary: itineraryData }) });
-                if (res.status === 401) {
-                    activeKeyHeader = activeKeyHeader === 'X-Master-Key' ? 'X-Access-Key' : 'X-Master-Key';
-                    hdrs = { 'Content-Type': 'application/json', [activeKeyHeader]: JSONBIN_API_KEY };
-                    res  = await fetch(JSONBIN_URL, { method:'PUT', headers:hdrs, body:JSON.stringify({ itinerary: itineraryData }) });
-                }
-                if (!res.ok) throw new Error('Push failed');
-                updateStatus('Cloud Synced', 'bg-emerald-500');
-            } catch (err) {
-                console.error('Push Error:', err);
-                updateStatus('Save Error', 'bg-red-500');
-            }
-        };
-
-        // ── DEFAULT DATA ──
-        const getDefaultData = () => [
-            { id:crypto.randomUUID(), category:'Transport',    date:'2026-05-20', time:'17:00', title:'Bengaluru Departure',        detail:'KJM Station • 16315 Mys Tvcn Exp',              cost:0,       icon:'fa-train'        },
-            { id:crypto.randomUUID(), category:'Transport',    date:'2026-05-21', time:'03:34', title:'Arrival Aluva',              detail:'Welcome to Kerala',                              cost:0,       icon:'fa-moon'         },
-            { id:crypto.randomUUID(), category:'Transport',    date:'2026-05-21', time:'04:30', title:'Aluva to Kothamangalam',     detail:'Step 1 • KSRTC Fast Passenger',                  cost:60,      icon:'fa-bus',
-              tips:['KSRTC buses to Kothamangalam are very frequent. The stand is right near the Aluva Metro/Railway station (~1.5 hrs trip).'] },
-            { id:crypto.randomUUID(), category:'Transport',    date:'2026-05-21', time:'06:30', title:'Ascending Munnar',           detail:'Kothamangalam KSRTC • Fast Passenger',           cost:120,     icon:'fa-mountain',
-              location:'Neriamangalam Route', comments:"Sitting on the RIGHT SIDE for the waterfall views!",
-              tips:['Catch an early morning bus (before 7 AM) to beat Ghat road traffic.', "Always sit on the RIGHT SIDE of the bus! You'll get the best unobstructed views of the valley, Cheeyappara, and Valara waterfalls."] },
-            { id:crypto.randomUUID(), category:'Transport',    date:'2026-05-23', time:'19:30', title:'Return Boarding: Alapuzha',  detail:'Intercity Travels • Bharat Benz A/C Sleeper',   cost:3407.90, icon:'fa-bus-simple',
-              location:'Near Ambalapuzha Junction', comments:'Travels Contact: 9591970700 / 9620636366' },
-            { id:crypto.randomUUID(), category:'Transport',    date:'2026-05-24', time:'07:00', title:'Bengaluru Drop-off',         detail:'End of the Expedition',                          cost:0,       icon:'fa-house-chimney',
-              location:'Madiwala - Near Savoury Hotel' }
+        // ─────────────────────────────────────────────────────────────
+        //  APP REGISTRY — add new apps here
+        // ─────────────────────────────────────────────────────────────
+        const APPS = [
+            {
+                title:    'Kerala Tour',
+                subtitle: 'Munnar · Alleppey',
+                icon:     'fa-map-location-dot',
+                gradient: 'linear-gradient(145deg, #1a5c38, #00695c)',
+                href:     'kerala-tour.html',
+                badge:    'Live',
+            },
+            {
+                title:    'Bengaluru Spotter',
+                subtitle: 'City spots & hidden gems',
+                icon:     'fa-location-dot',
+                gradient: 'linear-gradient(145deg, #1e3a5f, #1a6b8a)',
+                href:     'bengaluru-spotter.html',
+                badge:    'Live',
+            },
+            // ── Add more apps below ──
+            {
+                title:    'Coming Soon',
+                subtitle: 'New app on the way',
+                icon:     'fa-plus',
+                gradient: null,          // null → muted placeholder style
+                href:     null,          // null → shows "coming soon" toast
+                badge:    'Soon',
+            },
         ];
+        // ─────────────────────────────────────────────────────────────
 
-        // ── RENDER ──
-        function renderUI() {
-            const container = document.getElementById('timeline-container');
-            container.innerHTML = '';
+        function renderApps() {
+            const grid = document.getElementById('app-grid');
+            grid.innerHTML = '';
 
-            itineraryData.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+            APPS.forEach((app, i) => {
+                const isLive    = !!app.href;
+                const isMuted   = !app.gradient;
+                const badgeCls  = isLive ? 'live' : 'soon';
+                const cardCls   = isMuted ? 'app-card dimmed' : 'app-card';
+                const iconCls   = isMuted ? 'card-icon-wrap muted' : 'card-icon-wrap';
+                const iconStyle = app.gradient ? `background:${app.gradient};` : '';
 
-            // Group by date
-            const groups = {};
-            itineraryData.forEach(item => { (groups[item.date] ??= []).push(item); });
-            const dates = Object.keys(groups).sort();
+                const card = document.createElement('div');
+                card.className = cardCls;
+                card.style.animationDelay = `${0.28 + i * 0.07}s`;
+                card.innerHTML = `
+                    ${app.badge ? `<span class="card-badge ${badgeCls}">${app.badge}</span>` : ''}
+                    <div class="${iconCls}" style="${iconStyle}">
+                        <i class="fa-solid ${app.icon}"></i>
+                    </div>
+                    <div class="card-title">${app.title}</div>
+                    ${app.subtitle ? `<div class="card-sub">${app.subtitle}</div>` : ''}
+                `;
 
-            let idx = 0;
-            dates.forEach((dateKey, dayIdx) => {
-                // Day separator
-                const d   = new Date(dateKey + 'T12:00:00');
-                const lbl = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }).toUpperCase();
-                const sep = document.createElement('div');
-                sep.className = 'day-sep';
-                sep.style.animationDelay = `${idx * 0.08}s`;
-                sep.innerHTML = `<span class="day-badge">Day ${dayIdx + 1} — ${lbl}</span><div class="day-line"></div>`;
-                container.appendChild(sep);
-
-                groups[dateKey].forEach(item => {
-                    const t   = new Date(`${item.date}T${item.time}`);
-                    const ts  = t.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
-                    const cfg = CAT[item.category] || CAT['Miscellaneous'];
-
-                    const card = document.createElement('div');
-                    card.className = 'timeline-card relative flex items-start z-10';
-                    card.style.animationDelay = `${idx * 0.1}s`;
-
-                    const locHTML = item.location ? (() => {
-                        const isURL = item.location.startsWith('http');
-                        return `<a ${isURL ? `href="${item.location}" target="_blank"` : ''} class="mb-2.5 flex items-center rounded-lg px-2.5 py-1.5 border text-[10px] font-bold transition-colors" style="background:${cfg.light};color:${cfg.color};border-color:${cfg.color}22;">
-                                    <i class="fa-solid fa-location-dot mr-1.5 flex-shrink-0"></i>
-                                    <span class="truncate">${item.location}</span>
-                                    ${isURL ? '<i class="fa-solid fa-arrow-up-right-from-square ml-auto text-[8px] opacity-40 flex-shrink-0"></i>' : ''}
-                                </a>`;
-                    })() : '';
-
-                    const commentsHTML = item.comments
-                        ? `<div class="mb-2.5 text-[10px] text-gray-500 italic bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 flex items-start gap-1.5">
-                               <i class="fa-solid fa-quote-left text-[7px] text-gray-300 mt-0.5 flex-shrink-0"></i>
-                               <span>${item.comments}</span>
-                           </div>` : '';
-
-                    const tipsHTML = item.tips?.length
-                        ? `<div class="mb-2.5 rounded-xl p-3 border" style="background:#fffbeb;border-color:#fde68a;">
-                               <h4 class="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-2 flex items-center">
-                                   <i class="fa-solid fa-lightbulb mr-1.5"></i>Pro Tip${item.tips.length > 1 ? 's' : ''}
-                               </h4>
-                               <ul class="space-y-1.5">${item.tips.map(tip =>
-                                   `<li class="text-[10px] text-gray-600 font-medium flex items-start gap-1.5">
-                                        <i class="fa-solid fa-star text-[7px] text-amber-400 mt-1 flex-shrink-0"></i>
-                                        <span>${tip}</span>
-                                    </li>`).join('')}
-                               </ul>
-                           </div>` : '';
-
-                    card.innerHTML = `
-                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 text-white shadow-lg"
-                             style="background:linear-gradient(145deg,${cfg.color},${cfg.color}bb);">
-                            <i class="fa-solid ${item.icon || cfg.icon} text-sm"></i>
-                        </div>
-                        <div class="ml-4 flex-1 min-w-0">
-                            <div class="flex justify-between items-start mb-1 gap-2">
-                                <h3 class="font-bold text-gray-800 text-sm leading-tight">${item.title}</h3>
-                                <span class="text-[8px] font-black px-2 py-0.5 rounded-full flex-shrink-0 text-white"
-                                      style="background:${cfg.color};">${cfg.label}</span>
-                            </div>
-                            <p class="text-[11px] text-gray-400 mb-2.5 font-medium">
-                                ${ts}${item.detail ? ` • ${item.detail}` : ''}
-                            </p>
-                            ${locHTML}${commentsHTML}${tipsHTML}
-                            <div class="rounded-xl px-3 py-2 border border-gray-100 bg-white flex justify-between items-center">
-                                <button onclick="deleteItem('${item.id}')"
-                                        class="text-gray-300 hover:text-red-500 p-1 -ml-1 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
-                                    <i class="fa-solid fa-trash-can text-[11px]"></i>
-                                </button>
-                                <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
-                                      style="color:${cfg.color};background:${cfg.light};border-color:${cfg.color}22;">
-                                    <i class="fa-solid ${item.icon || cfg.icon} mr-1 text-[8px]"></i>${item.category}
-                                </span>
-                                <div class="relative">
-                                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold"
-                                          style="color:${cfg.color};opacity:.55;">₹</span>
-                                    <input type="number" value="${item.cost}"
-                                           onchange="updateItemCost('${item.id}', this.value)"
-                                           class="w-24 pl-5 pr-2 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px] outline-none font-bold transition-all focus:bg-white focus:border-gray-300"
-                                           style="color:${cfg.color};">
-                                </div>
-                            </div>
-                        </div>`;
-                    container.appendChild(card);
-                    idx++;
+                card.addEventListener('click', () => {
+                    if (isLive) {
+                        window.location.href = app.href;
+                    } else {
+                        showToast(`${app.title} — coming soon!`);
+                    }
                 });
+
+                grid.appendChild(card);
             });
-
-            document.getElementById('event-count').innerText =
-                `${itineraryData.length} event${itineraryData.length !== 1 ? 's' : ''} planned`;
-            updateBudgetChart();
         }
 
-        // ── COST UPDATE / DELETE ──
-        window.updateItemCost = (id, val) => {
-            const i = itineraryData.findIndex(x => x.id === id);
-            if (i !== -1) { itineraryData[i].cost = parseFloat(val) || 0; saveData(); }
-        };
-
-        window.deleteItem = (id) => {
-            itineraryData = itineraryData.filter(x => x.id !== id);
-            saveData();
-        };
-
-        // ── STEP NAVIGATION ──
-        let currentStep = 1;
-        const TOTAL_STEPS  = 4;
-        const STEP_TITLES  = ['Category & Time', 'Event Info', 'Location & Notes', 'Budget & Tips'];
-        const STEP_PCT     = [25, 50, 75, 100];
-
-        function goToStep(step, fromBack = false) {
-            const prev = document.querySelector(`.step-panel[data-step="${currentStep}"]`);
-            const next = document.querySelector(`.step-panel[data-step="${step}"]`);
-            prev.classList.remove('active');
-            next.classList.toggle('from-back', fromBack);
-            next.classList.add('active');
-            currentStep = step;
-
-            document.getElementById('step-label').innerText    = `Step ${step} of ${TOTAL_STEPS}`;
-            document.getElementById('step-title').innerText    = STEP_TITLES[step - 1];
-            document.getElementById('step-progress').style.width = `${STEP_PCT[step - 1]}%`;
-
-            document.querySelectorAll('.step-dot').forEach(dot => {
-                const s = parseInt(dot.dataset.step);
-                dot.style.background = s <= step ? '#2d7a4d' : '#e5e7eb';
-                dot.style.width      = s === step ? '20px' : '6px';
-            });
-
-            document.getElementById('btn-back').style.display = step > 1 ? '' : 'none';
-            document.getElementById('btn-next').innerHTML = step === TOTAL_STEPS
-                ? '<i class="fa-solid fa-check mr-1.5"></i> Add Event'
-                : 'Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>';
+        // Toast
+        let toastTimer;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
         }
 
-        function flashInvalid(el) {
-            el.style.borderColor = '#ef4444';
-            el.focus();
-            setTimeout(() => el.style.borderColor = '', 1500);
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
         }
 
-        window.stepNext = () => {
-            if (currentStep === 1) {
-                if (!document.getElementById('form-date').value) { flashInvalid(document.getElementById('form-date')); return; }
-                if (!document.getElementById('form-time').value) { flashInvalid(document.getElementById('form-time')); return; }
-            }
-            if (currentStep === 2 && !document.getElementById('form-title').value.trim()) {
-                flashInvalid(document.getElementById('form-title')); return;
-            }
-            if (currentStep < TOTAL_STEPS) {
-                goToStep(currentStep + 1);
-            } else {
-                document.getElementById('event-form').dispatchEvent(new Event('submit', { cancelable: true }));
-            }
-        };
-
-        window.stepBack = () => { if (currentStep > 1) goToStep(currentStep - 1, true); };
-
-        // ── MODAL ──
-        window.openModal  = () => {
-            const now = new Date();
-            document.getElementById('form-date').value = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
-            document.getElementById('form-time').value = now.toTimeString().slice(0, 5);  // HH:MM
-            goToStep(1);
-            document.getElementById('add-form-modal').style.display = 'flex';
-        };
-        window.closeModal = () => document.getElementById('add-form-modal').style.display = 'none';
-        window.handleModalBackdrop = (e) => { if (e.target === document.getElementById('add-form-modal')) closeModal(); };
-
-        // ── BUDGET CHART ──
-        function updateBudgetChart() {
-            const totals = { Transport:0, Accommodation:0, Food:0, Experiences:0, Miscellaneous:0 };
-            let grand = 0;
-            itineraryData.forEach(item => {
-                const c = Number(item.cost || 0);
-                if (totals[item.category] !== undefined) totals[item.category] += c;
-                grand += c;
-            });
-
-            const fmt   = n => `₹${Math.round(n).toLocaleString('en-IN')}`;
-            const total = fmt(grand);
-            document.getElementById('total-cost').innerText        = total;
-            document.getElementById('total-cost-center').innerText = total;
-
-            const labels = Object.keys(totals);
-            const data   = Object.values(totals);
-            const colors = labels.map(l => CAT[l].color);
-
-            const ctx = document.getElementById('budget-chart');
-            if (!ctx) return;
-            if (chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx.getContext('2d'), {
-                type: 'doughnut',
-                data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth:3, borderColor:'#fff', hoverOffset:8 }] },
-                options: {
-                    responsive:true, maintainAspectRatio:false, cutout:'72%',
-                    plugins: {
-                        legend: { display:false },
-                        tooltip: { callbacks: { label: c => ` ${fmt(c.raw)}` } }
-                    },
-                    animation: { animateRotate:true, duration:900 }
-                }
-            });
-
-            document.getElementById('budget-legend').innerHTML = labels.map((l, i) => `
-                <div class="flex justify-between items-center text-[10px] font-bold gap-2">
-                    <span class="flex items-center gap-1.5 min-w-0">
-                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${colors[i]};"></span>
-                        <span class="text-gray-600 truncate">${l}</span>
-                    </span>
-                    <span class="flex-shrink-0" style="color:${colors[i]};">${fmt(data[i])}</span>
-                </div>`).join('');
-        }
-
-        // ── COUNTDOWN ──
-        function startCountdown() {
-            const target = new Date('May 20, 2026 17:00:00').getTime();
-            const tick = () => {
-                const diff = target - Date.now();
-                if (diff < 0) return;
-                document.getElementById('cd-days').innerText    = String(Math.floor(diff / 86400000)).padStart(2,'0');
-                document.getElementById('cd-hours').innerText   = String(Math.floor((diff % 86400000) / 3600000)).padStart(2,'0');
-                document.getElementById('cd-minutes').innerText = String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0');
-                document.getElementById('cd-seconds').innerText = String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
-            };
-            tick();
-            setInterval(tick, 1000);
-        }
-
-        // ── FORM ──
-        function setupForm() {
-            document.getElementById('event-form').onsubmit = async (e) => {
-                e.preventDefault();
-                const tip = document.getElementById('form-tip').value;
-                itineraryData.push({
-                    id:       crypto.randomUUID(),
-                    category: document.getElementById('form-category').value,
-                    date:     document.getElementById('form-date').value,
-                    time:     document.getElementById('form-time').value,
-                    title:    document.getElementById('form-title').value,
-                    detail:   document.getElementById('form-detail').value   || '',
-                    location: document.getElementById('form-location').value || '',
-                    comments: document.getElementById('form-comments').value || '',
-                    cost:     parseFloat(document.getElementById('form-cost').value) || 0,
-                    tips:     tip ? [tip] : []
-                });
-                await saveData();
-                closeModal();
-                document.getElementById('event-form').reset();
-                goToStep(1);
-            };
-        }
+        // Init
+        (function init() {
+            const saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            renderApps();
+        })();
     </script>
 </body>
 </html>
