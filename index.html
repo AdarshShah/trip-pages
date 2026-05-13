@@ -723,6 +723,10 @@
                                         class="text-gray-300 hover:text-red-500 p-1 -ml-1 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
                                     <i class="fa-solid fa-trash-can text-[11px]"></i>
                                 </button>
+                                <span class="text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
+                                      style="color:${cfg.color};background:${cfg.light};border-color:${cfg.color}22;">
+                                    <i class="fa-solid ${item.icon || cfg.icon} mr-1 text-[8px]"></i>${item.category}
+                                </span>
                                 <div class="relative">
                                     <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold"
                                           style="color:${cfg.color};opacity:.55;">₹</span>
