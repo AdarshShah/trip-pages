@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adarsh & Himu: The Munnar Expedition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;800&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                        header: ['Montserrat', 'sans-serif'],
+                    },
+                    colors: {
+                        kerala: {
+                            50: '#f0f9f1',
+                            100: '#dcf1df',
+                            200: '#bbe3c3',
+                            500: '#2d7a4d', 
+                            600: '#24633e',
+                            700: '#1d5032',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f4f7f5;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%232d7a4d' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(45, 122, 77, 0.1);
+        }
+        .kerala-gradient {
+            background: linear-gradient(135deg, #2d7a4d 0%, #00695c 100%);
+        }
+        .timeline-track {
+            position: absolute;
+            left: 24px;
+            top: 40px;
+            bottom: 40px;
+            width: 2px;
+            background: #e2e8f0;
+        }
+        #add-form-modal {
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 flex flex-col items-center p-0 sm:p-4 min-h-screen relative">
+
+    <!-- App Loader -->
+    <div id="loading-screen" class="loading-overlay">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-kerala-100 border-t-kerala-600 rounded-full animate-spin mb-4 mx-auto"></div>
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Connecting to Data Node...</p>
+        </div>
+    </div>
+
+    <!-- Add Event Modal -->
+    <div id="add-form-modal" class="fixed inset-0 z-[100] items-center justify-center p-4">
+        <div class="glass-card w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-serif text-kerala-700">Add New Event</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-2"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            
+            <form id="event-form" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Category</label>
+                    <select id="form-category" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none">
+                        <option value="Transport">Transport</option>
+                        <option value="Accommodation">Accommodation</option>
+                        <option value="Food">Food</option>
+                        <option value="Experiences">Experiences</option>
+                        <option value="Miscellaneous">Miscellaneous</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Date</label>
+                        <input type="date" id="form-date" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Time</label>
+                        <input type="time" id="form-time" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Title</label>
+                    <input type="text" id="form-title" placeholder="e.g., Tea Museum Visit" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Location (Optional)</label>
+                    <input type="text" id="form-location" placeholder="Google Maps link or address" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Comments (Optional)</label>
+                    <textarea id="form-comments" placeholder="Extra details..." class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none" rows="2"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Pro Tip (Optional)</label>
+                    <input type="text" id="form-tip" placeholder="e.g., Best views on the right side!" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-1 focus:ring-kerala-500 outline-none">
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">Cancel</button>
+                    <button type="submit" class="flex-1 py-3 bg-kerala-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-kerala-100">Add Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-md bg-white shadow-2xl relative overflow-hidden sm:rounded-3xl flex flex-col min-h-screen sm:min-h-0 border border-gray-100">
+        
+        <header class="relative h-64 w-full overflow-hidden kerala-gradient">
+            <div class="absolute inset-0 opacity-10" style="background-image: url('https://www.transparenttextures.com/patterns/topography.png');"></div>
+            <div class="absolute bottom-0 left-0 w-full p-8 z-10">
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase">The Munnar Expedition</span>
+                </div>
+                <h1 class="text-4xl font-serif text-white leading-tight mb-1">Kerala Trip</h1>
+                <p class="text-white/80 font-medium tracking-wide flex items-center">
+                    Adarsh <span class="mx-2 text-amber-400"><i class="fa-solid fa-heart text-[10px]"></i></span> Himu
+                </p>
+            </div>
+        </header>
+
+        <div class="px-6 -mt-8 relative z-20">
+            <div class="glass-card rounded-2xl shadow-xl p-5 flex flex-col items-center">
+                <div class="flex space-x-5 text-center mb-3">
+                    <div class="flex flex-col"><span id="cd-days" class="text-3xl font-header font-bold text-gray-800">00</span><span class="text-[9px] uppercase font-bold text-gray-400 tracking-tighter">Days</span></div>
+                    <div class="flex flex-col"><span id="cd-hours" class="text-3xl font-header font-bold text-gray-800">00</span><span class="text-[9px] uppercase font-bold text-gray-400 tracking-tighter">Hours</span></div>
+                    <div class="flex flex-col"><span id="cd-minutes" class="text-3xl font-header font-bold text-gray-800">00</span><span class="text-[9px] uppercase font-bold text-gray-400 tracking-tighter">Mins</span></div>
+                    <div class="flex flex-col"><span id="cd-seconds" class="text-3xl font-header font-bold text-gray-800 text-kerala-500">00</span><span class="text-[9px] uppercase font-bold text-gray-400 tracking-tighter">Secs</span></div>
+                </div>
+                <div id="sync-status" class="mt-4 flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400 mr-2 animate-pulse"></span> <span id="sync-text">Connecting...</span>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex-1 px-6 py-8">
+            <!-- Setup Warning for Missing Keys -->
+            <div id="setup-warning" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-[11px] font-medium leading-relaxed">
+                <i class="fa-solid fa-screwdriver-wrench mr-1"></i> <strong>JSONBin Setup Required:</strong> Replace `JSONBIN_API_KEY` and `JSONBIN_BIN_ID` in the code. Currently running in offline local-only mode.
+            </div>
+            
+            <div id="auth-warning" class="hidden mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-[11px] font-medium leading-relaxed">
+                <i class="fa-solid fa-key mr-1"></i> <strong>Auth Error:</strong> The API key provided is invalid or has restrictive permissions.
+            </div>
+
+            <!-- Financial Summary -->
+            <div class="mb-10 bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+                <h2 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Financial Overview</h2>
+                <div class="grid grid-cols-2 gap-4 items-center">
+                    <div class="h-32">
+                        <canvas id="budget-chart"></canvas>
+                    </div>
+                    <div id="budget-legend" class="space-y-1.5"></div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200/50 flex justify-between items-center">
+                   <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Estimated</span>
+                   <span id="total-cost" class="text-lg font-header font-bold text-kerala-700">₹0</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">The Journey Log</h2>
+                <button onclick="openModal()" class="text-xs font-bold bg-kerala-50 text-kerala-600 px-3 py-1.5 rounded-lg flex items-center hover:bg-kerala-100 transition-colors">
+                    <i class="fa-solid fa-plus mr-1.5"></i> Add
+                </button>
+            </div>
+
+            <div class="relative">
+                <div class="timeline-track"></div>
+                <div id="timeline-container" class="space-y-10">
+                    <!-- Events loaded dynamically -->
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-gray-50 p-8 text-center border-t border-gray-100">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">Adventure Companion • v6.1 JSON</p>
+            <p class="text-xs text-gray-500 font-medium italic mb-4">Safe Travels, Adarsh & Himu!</p>
+            <button onclick="fetchData(true)" class="inline-block px-4 py-2 bg-white border border-gray-200 rounded-full text-[9px] font-bold text-gray-600 uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95 shadow-sm">
+                <i class="fa-solid fa-rotate mr-1"></i> Sync Now
+            </button>
+        </footer>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button onclick="openModal()" class="fixed bottom-6 right-6 w-14 h-14 bg-kerala-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[80] hover:scale-110 active:scale-95 transition-all">
+        <i class="fa-solid fa-plus text-xl"></i>
+    </button>
+
+    <script>
+        // ==========================================
+        // 🔒 JSONBIN.IO HARDCODED CREDENTIALS
+        // Replace these with your actual keys from jsonbin.io
+        // ==========================================
+        const JSONBIN_API_KEY = 'REDACTED_API_KEY';
+        const JSONBIN_BIN_ID = '6a041bfec0954111d817454e';
+        
+        // Configuration Check
+        const isConfigured = JSONBIN_API_KEY !== 'YOUR_JSONBIN_API_KEY' && JSONBIN_BIN_ID !== 'YOUR_BIN_ID';
+        const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+        const categoryConfig = {
+            'Transport': { color: '#2d7a4d', icon: 'fa-bus' },
+            'Accommodation': { color: '#0ea5e9', icon: 'fa-hotel' },
+            'Food': { color: '#f59e0b', icon: 'fa-utensils' },
+            'Experiences': { color: '#8b5cf6', icon: 'fa-camera' },
+            'Miscellaneous': { color: '#64748b', icon: 'fa-receipt' }
+        };
+
+        let itineraryData = [];
+        let chartInstance = null;
+        let isSyncing = false;
+        let activeKeyHeader = 'X-Master-Key'; // Defaults to master key, falls back to access key if 401
+
+        // UI Helpers
+        const hideLoading = () => {
+            const loader = document.getElementById('loading-screen');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        };
+
+        const updateStatus = (text, dotClass) => {
+            document.getElementById('sync-text').innerText = text;
+            const dot = document.getElementById('sync-dot');
+            dot.className = `w-2 h-2 rounded-full mr-2 ${dotClass}`;
+        };
+
+        window.onload = () => {
+            if (!isConfigured) {
+                document.getElementById('setup-warning').classList.remove('hidden');
+                console.warn("Running in Offline Storage Mode. Replace JSONBIN keys to enable cloud sync.");
+            }
+            fetchData();
+            startCountdown();
+            setupForm();
+            
+            // Auto-poll for changes every 15 seconds (only if configured)
+            if (isConfigured) {
+                setInterval(() => fetchData(false), 15000);
+            }
+        };
+
+        // Fetch from JSONBin (or LocalStorage if unconfigured)
+        window.fetchData = async (manual = false) => {
+            if (isSyncing) return;
+            isSyncing = true;
+            
+            if (manual) updateStatus('Syncing...', 'bg-blue-400 animate-pulse');
+
+            try {
+                if (!isConfigured) {
+                    // Fallback to Local Storage
+                    const localData = localStorage.getItem('munnar_offline_data');
+                    if (localData) {
+                        itineraryData = JSON.parse(localData);
+                    } else {
+                        itineraryData = getDefaultData();
+                        saveDataLocal();
+                    }
+                    updateStatus('Local Mode', 'bg-amber-500');
+                } else {
+                    // Fetch from JSONBin (Try primary key type first)
+                    let reqHeaders = {};
+                    reqHeaders[activeKeyHeader] = JSONBIN_API_KEY;
+
+                    let res = await fetch(JSONBIN_URL, {
+                        method: 'GET',
+                        headers: reqHeaders
+                    });
+                    
+                    // Fallback: If JSONBin returns 401, it means the user provided an "Access Key" instead of a "Master Key". Switch headers and retry!
+                    if (res.status === 401) {
+                        activeKeyHeader = activeKeyHeader === 'X-Master-Key' ? 'X-Access-Key' : 'X-Master-Key';
+                        reqHeaders = {};
+                        reqHeaders[activeKeyHeader] = JSONBIN_API_KEY;
+                        
+                        res = await fetch(JSONBIN_URL, {
+                            method: 'GET',
+                            headers: reqHeaders
+                        });
+                        
+                        if (res.status === 401) {
+                             document.getElementById('auth-warning').classList.remove('hidden');
+                             throw new Error('Invalid API Key provided.');
+                        }
+                    }
+                    
+                    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                    document.getElementById('auth-warning').classList.add('hidden');
+                    const data = await res.json();
+                    
+                    if (data.record && data.record.itinerary) {
+                        itineraryData = data.record.itinerary;
+                    } else {
+                        itineraryData = getDefaultData();
+                        await pushDataCloud(); // Seed first time
+                    }
+                    updateStatus('Cloud Synced', 'bg-emerald-500');
+                }
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                updateStatus('Sync Failed', 'bg-red-500');
+            } finally {
+                isSyncing = false;
+                renderUI();
+                hideLoading();
+            }
+        };
+
+        // Save to JSONBin (or LocalStorage)
+        window.saveData = async () => {
+            if (!isConfigured) {
+                saveDataLocal();
+                renderUI();
+                return;
+            }
+            await pushDataCloud();
+            renderUI();
+        };
+
+        const saveDataLocal = () => {
+            localStorage.setItem('munnar_offline_data', JSON.stringify(itineraryData));
+        };
+
+        const pushDataCloud = async () => {
+            updateStatus('Saving...', 'bg-blue-400 animate-pulse');
+            try {
+                let reqHeaders = { 'Content-Type': 'application/json' };
+                reqHeaders[activeKeyHeader] = JSONBIN_API_KEY;
+
+                let res = await fetch(JSONBIN_URL, {
+                    method: 'PUT',
+                    headers: reqHeaders,
+                    body: JSON.stringify({ itinerary: itineraryData })
+                });
+
+                // Fallback for 401 Unauthorized during PUT
+                if (res.status === 401) {
+                    activeKeyHeader = activeKeyHeader === 'X-Master-Key' ? 'X-Access-Key' : 'X-Master-Key';
+                    reqHeaders = { 'Content-Type': 'application/json' };
+                    reqHeaders[activeKeyHeader] = JSONBIN_API_KEY;
+
+                    res = await fetch(JSONBIN_URL, {
+                        method: 'PUT',
+                        headers: reqHeaders,
+                        body: JSON.stringify({ itinerary: itineraryData })
+                    });
+                }
+
+                if (!res.ok) throw new Error('Failed to push data');
+                updateStatus('Cloud Synced', 'bg-emerald-500');
+            } catch (err) {
+                console.error("Push Error:", err);
+                updateStatus('Save Error', 'bg-red-500');
+            }
+        };
+
+        const getDefaultData = () => [
+            { id: crypto.randomUUID(), category: 'Transport', date: '2026-05-20', time: '17:00', title: 'Bengaluru Departure', detail: 'KJM Station • 16315 Mys Tvcn Exp', cost: 0, icon: 'fa-train' },
+            { id: crypto.randomUUID(), category: 'Transport', date: '2026-05-21', time: '03:34', title: 'Arrival Aluva', detail: 'Welcome to Kerala', cost: 0, icon: 'fa-moon' },
+            { id: crypto.randomUUID(), category: 'Transport', date: '2026-05-21', time: '04:30', title: 'Aluva to Kothamangalam', detail: 'Step 1 • KSRTC Fast Passenger', cost: 60, icon: 'fa-bus', tips: ['KSRTC buses to Kothamangalam are very frequent. The stand is right near the Aluva Metro/Railway station (~1.5 hrs trip).'] },
+            { id: crypto.randomUUID(), category: 'Transport', date: '2026-05-21', time: '06:30', title: 'Ascending Munnar', detail: 'Kothamangalam KSRTC • Fast Passenger', cost: 120, icon: 'fa-mountain', location: 'Neriamangalam Route', comments: 'Sitting on the RIGHT SIDE for the waterfall views!', tips: ['Catch an early morning bus (before 7 AM) to beat Ghat road traffic.', 'Always sit on the RIGHT SIDE of the bus! You\'ll get the best unobstructed views of the valley, Cheeyappara, and Valara waterfalls.'] },
+            { id: crypto.randomUUID(), category: 'Transport', date: '2026-05-23', time: '19:30', title: 'Return Boarding: Alapuzha', detail: 'Intercity Travels • Bharat Benz A/C Sleeper', cost: 3407.90, icon: 'fa-bus-simple', location: 'Near Ambalapuzha Junction', comments: 'Travels Contact: 9591970700 / 9620636366' },
+            { id: crypto.randomUUID(), category: 'Transport', date: '2026-05-24', time: '07:00', title: 'Bengaluru Drop-off', detail: 'End of the Expedition', cost: 0, icon: 'fa-house-chimney', location: 'Madiwala - Near Savoury Hotel' }
+        ];
+
+        // UI & DOM Logics
+        function renderUI() {
+            const container = document.getElementById('timeline-container');
+            container.innerHTML = '';
+            
+            // Sort chronologically
+            itineraryData.sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
+
+            itineraryData.forEach((item) => {
+                const date = new Date(`${item.date}T${item.time}`);
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+                const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+                const card = document.createElement('div');
+                card.className = "relative flex items-start z-10 group transition-all duration-300";
+                const config = categoryConfig[item.category] || categoryConfig['Miscellaneous'];
+
+                card.innerHTML = `
+                    <div class="w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center flex-shrink-0 text-white transform group-hover:scale-110 transition-transform" style="background-color: ${config.color}">
+                        <i class="fa-solid ${item.icon || config.icon}"></i>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-bold text-gray-800 text-sm">${item.title}</h3>
+                            <span class="text-[9px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded">${dateStr}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-500 mb-2 font-medium">${timeStr} • ${item.detail || item.category}</p>
+                        
+                        ${item.location ? `
+                            <div class="mb-2 text-[10px] text-kerala-600 font-bold bg-kerala-50/50 p-2 rounded-lg border border-kerala-100/50 flex items-center">
+                                <i class="fa-solid fa-location-dot mr-2"></i> ${item.location}
+                            </div>
+                        ` : ''}
+
+                        ${item.comments ? `
+                            <div class="mb-3 text-[10px] text-gray-500 italic bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                "${item.comments}"
+                            </div>
+                        ` : ''}
+
+                        ${item.tips && item.tips.length > 0 ? `
+                            <div class="mb-3 bg-amber-50/50 border border-amber-100 rounded-xl p-3">
+                                <h4 class="text-[9px] font-bold text-amber-600 uppercase tracking-widest mb-1.5 flex items-center"><i class="fa-solid fa-lightbulb mr-1.5"></i>Pro Tips</h4>
+                                <ul class="space-y-1">
+                                    ${item.tips.map(tip => `<li class="text-[10px] text-gray-600 font-medium flex items-start"><i class="fa-solid fa-check text-[7px] text-amber-400 mt-1 mr-1.5"></i> ${tip}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        <div class="bg-white rounded-xl p-3 border border-gray-100 shadow-sm flex justify-between items-center group-hover:border-kerala-200 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <button onclick="deleteItem('${item.id}')" class="text-gray-300 hover:text-red-500 transition-colors p-1"><i class="fa-solid fa-trash-can text-[11px]"></i></button>
+                                <span class="text-[9px] font-bold uppercase text-gray-400 border-l border-gray-100 pl-3">${item.category}</span>
+                            </div>
+                            <div class="relative">
+                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-300">₹</span>
+                                <input type="number" value="${item.cost}" onchange="updateItemCost('${item.id}', this.value)" 
+                                    class="w-24 pl-5 pr-2 py-1 bg-gray-50 border border-gray-100 rounded text-[11px] focus:ring-1 focus:ring-kerala-500 outline-none font-bold text-kerala-600 transition-all focus:bg-white">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            updateBudgetChart();
+        }
+
+        window.updateItemCost = (id, val) => {
+            const cost = parseFloat(val) || 0;
+            const index = itineraryData.findIndex(i => i.id === id);
+            if (index !== -1) {
+                itineraryData[index].cost = cost;
+                saveData();
+            }
+        };
+
+        window.deleteItem = (id) => {
+            itineraryData = itineraryData.filter(i => i.id !== id);
+            saveData();
+        };
+
+        window.openModal = () => document.getElementById('add-form-modal').style.display = 'flex';
+        window.closeModal = () => document.getElementById('add-form-modal').style.display = 'none';
+
+        function updateBudgetChart() {
+            const totals = { Transport: 0, Accommodation: 0, Food: 0, Experiences: 0, Miscellaneous: 0 };
+            let grandTotal = 0;
+            itineraryData.forEach(item => { 
+                const cost = Number(item.cost || 0);
+                if (totals[item.category] !== undefined) totals[item.category] += cost;
+                grandTotal += cost;
+            });
+            
+            document.getElementById('total-cost').innerText = `₹${Math.round(grandTotal).toLocaleString()}`;
+
+            const labels = Object.keys(totals);
+            const data = Object.values(totals);
+            const colors = labels.map(l => categoryConfig[l].color);
+            
+            const ctx = document.getElementById('budget-chart');
+            if (!ctx) return;
+            
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut', 
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        data, 
+                        backgroundColor: colors, 
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '70%', 
+                    plugins: { legend: { display: false } } 
+                }
+            });
+
+            document.getElementById('budget-legend').innerHTML = labels.map((l, i) => `
+                <div class="flex justify-between items-center text-[10px] font-bold">
+                    <span class="flex items-center"><span class="w-2 h-2 rounded-full mr-2" style="background:${colors[i]}"></span> ${l}</span>
+                    <span class="text-gray-500">₹${Math.round(data[i]).toLocaleString()}</span>
+                </div>
+            `).join('');
+        }
+
+        function startCountdown() {
+            const target = new Date('May 20, 2026 17:00:00').getTime();
+            const timer = setInterval(() => {
+                const now = new Date().getTime();
+                const diff = target - now;
+                if (diff < 0) { clearInterval(timer); return; }
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+                document.getElementById('cd-days').innerText = d.toString().padStart(2, '0');
+                document.getElementById('cd-hours').innerText = h.toString().padStart(2, '0');
+                document.getElementById('cd-minutes').innerText = m.toString().padStart(2, '0');
+                document.getElementById('cd-seconds').innerText = s.toString().padStart(2, '0');
+            }, 1000);
+        }
+
+        function setupForm() {
+            const form = document.getElementById('event-form');
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const formTip = document.getElementById('form-tip').value;
+                const tipsArray = formTip ? [formTip] : [];
+                
+                const newItem = {
+                    id: crypto.randomUUID(),
+                    category: document.getElementById('form-category').value,
+                    date: document.getElementById('form-date').value,
+                    time: document.getElementById('form-time').value,
+                    title: document.getElementById('form-title').value,
+                    location: document.getElementById('form-location').value || '',
+                    comments: document.getElementById('form-comments').value || '',
+                    cost: 0,
+                    tips: tipsArray
+                };
+                
+                itineraryData.push(newItem);
+                await saveData();
+                
+                window.closeModal();
+                form.reset();
+            };
+        }
+    </script>
+</body>
+</html>
