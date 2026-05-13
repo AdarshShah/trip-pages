@@ -190,6 +190,20 @@
         .fab:hover { transform:scale(1.1); box-shadow:0 12px 36px rgba(45,122,77,.55); }
         .fab:active { transform:scale(.94); }
 
+        /* ── STEP FORM ── */
+        @keyframes stepIn {
+            from { opacity:0; transform:translateX(18px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes stepInBack {
+            from { opacity:0; transform:translateX(-18px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        .step-panel { display:none; }
+        .step-panel.active { display:block; animation: stepIn .22s ease forwards; }
+        .step-panel.active.from-back { animation: stepInBack .22s ease forwards; }
+        .step-dot { transition: width .25s ease, background .25s ease; border-radius:9999px; height:6px; }
+
         /* ── MISC ── */
         .text-shadow { text-shadow: 0 2px 16px rgba(0,0,0,.4); }
         .input-focus { transition: border-color .2s, box-shadow .2s; }
@@ -213,72 +227,117 @@
 
     <!-- ═══ ADD EVENT MODAL ═══ -->
     <div id="add-form-modal" class="fixed inset-0 z-[100] items-center justify-center p-4" onclick="handleModalBackdrop(event)">
-        <div class="modal-sheet glass-card w-full max-w-sm rounded-3xl p-6 shadow-2xl" id="modal-inner">
-            <div class="flex justify-between items-center mb-5">
-                <div>
-                    <h2 class="text-xl font-serif" style="color:#1d5032">Add New Event</h2>
-                    <p class="text-[10px] text-gray-400 mt-0.5">Fill in the details below</p>
+        <div class="modal-sheet glass-card w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" id="modal-inner">
+
+            <!-- Step Header -->
+            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(135deg,#f0fdf4,#fff);">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.18em] mb-0.5" id="step-label">Step 1 of 4</p>
+                        <h2 class="text-lg font-serif" style="color:#1d5032" id="step-title">Category &amp; Time</h2>
+                    </div>
+                    <button onclick="closeModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shadow-sm">
+                        <i class="fa-solid fa-times text-sm"></i>
+                    </button>
                 </div>
-                <button onclick="closeModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
-                    <i class="fa-solid fa-times"></i>
-                </button>
+                <!-- Progress bar -->
+                <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                    <div id="step-progress" class="h-full rounded-full transition-all duration-300" style="background:linear-gradient(90deg,#2d7a4d,#00695c);width:25%;"></div>
+                </div>
+                <!-- Step dots -->
+                <div class="flex justify-center gap-2">
+                    <div class="step-dot" data-step="1" style="width:20px;background:#2d7a4d;"></div>
+                    <div class="step-dot" data-step="2" style="width:6px;background:#e5e7eb;"></div>
+                    <div class="step-dot" data-step="3" style="width:6px;background:#e5e7eb;"></div>
+                    <div class="step-dot" data-step="4" style="width:6px;background:#e5e7eb;"></div>
+                </div>
             </div>
 
-            <form id="event-form" class="space-y-3.5">
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
-                    <select id="form-category" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                        <option value="Transport">🚌  Transport</option>
-                        <option value="Accommodation">🏨  Accommodation</option>
-                        <option value="Food">🍛  Food</option>
-                        <option value="Experiences">📸  Experiences</option>
-                        <option value="Miscellaneous">🧾  Miscellaneous</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Date</label>
-                        <input type="date" id="form-date" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus" required>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Time</label>
-                        <input type="time" id="form-time" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus" required>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Title</label>
-                    <input type="text" id="form-title" placeholder="e.g., Tea Museum Visit" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus" required>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                    <input type="text" id="form-detail" placeholder="e.g., KSRTC Fast Passenger" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Location <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                    <input type="text" id="form-location" placeholder="Address or Google Maps link" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Notes <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                    <textarea id="form-comments" placeholder="Extra details…" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus resize-none" rows="2"></textarea>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Cost ₹ <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
-                        <input type="number" id="form-cost" placeholder="0" min="0" step="0.01" class="w-full pl-7 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+            <!-- Form -->
+            <form id="event-form" class="px-6 pb-6">
+
+                <!-- Step 1: Category & Time -->
+                <div class="step-panel active" data-step="1">
+                    <div class="space-y-4 py-5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
+                            <select id="form-category" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                                <option value="Transport">🚌  Transport</option>
+                                <option value="Accommodation">🏨  Accommodation</option>
+                                <option value="Food">🍛  Food</option>
+                                <option value="Experiences">📸  Experiences</option>
+                                <option value="Miscellaneous">🧾  Miscellaneous</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Date</label>
+                                <input type="date" id="form-date" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Time</label>
+                                <input type="time" id="form-time" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Pro Tip <span class="normal-case font-normal text-gray-300">(optional)</span></label>
-                    <input type="text" id="form-tip" placeholder="e.g., Best views on the right side!" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+
+                <!-- Step 2: Event Info -->
+                <div class="step-panel" data-step="2">
+                    <div class="space-y-4 py-5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Title <span class="text-red-400 normal-case font-normal">*required</span></label>
+                            <input type="text" id="form-title" placeholder="e.g., Tea Museum Visit" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <input type="text" id="form-detail" placeholder="e.g., KSRTC Fast Passenger" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                    </div>
                 </div>
-                <div class="flex space-x-3 pt-1">
-                    <button type="button" onclick="closeModal()" class="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">
-                        Cancel
+
+                <!-- Step 3: Location & Notes -->
+                <div class="step-panel" data-step="3">
+                    <div class="space-y-4 py-5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Location <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <input type="text" id="form-location" placeholder="Address or Google Maps link" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Notes <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <textarea id="form-comments" placeholder="Extra details…" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus resize-none" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Budget & Tips -->
+                <div class="step-panel" data-step="4">
+                    <div class="space-y-4 py-5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Cost ₹ <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">₹</span>
+                                <input type="number" id="form-cost" placeholder="0" min="0" step="0.01" class="w-full pl-7 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Pro Tip <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <input type="text" id="form-tip" placeholder="e.g., Best views on the right side!" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="flex gap-3 pt-2 border-t border-gray-100">
+                    <button type="button" id="btn-back" onclick="stepBack()"
+                            class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                            style="display:none;">
+                        <i class="fa-solid fa-arrow-left text-sm"></i>
                     </button>
-                    <button type="submit" class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95 shadow-lg"
-                            style="background:linear-gradient(135deg,#2d7a4d,#00695c); box-shadow:0 4px 14px rgba(45,122,77,.4);">
-                        <i class="fa-solid fa-plus mr-1.5"></i> Add Event
+                    <button type="button" id="btn-next" onclick="stepNext()"
+                            class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95 shadow-md"
+                            style="background:linear-gradient(135deg,#2d7a4d,#00695c);">
+                        Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
                     </button>
                 </div>
             </form>
@@ -695,8 +754,61 @@
             saveData();
         };
 
+        // ── STEP NAVIGATION ──
+        let currentStep = 1;
+        const TOTAL_STEPS  = 4;
+        const STEP_TITLES  = ['Category & Time', 'Event Info', 'Location & Notes', 'Budget & Tips'];
+        const STEP_PCT     = [25, 50, 75, 100];
+
+        function goToStep(step, fromBack = false) {
+            const prev = document.querySelector(`.step-panel[data-step="${currentStep}"]`);
+            const next = document.querySelector(`.step-panel[data-step="${step}"]`);
+            prev.classList.remove('active');
+            next.classList.toggle('from-back', fromBack);
+            next.classList.add('active');
+            currentStep = step;
+
+            document.getElementById('step-label').innerText    = `Step ${step} of ${TOTAL_STEPS}`;
+            document.getElementById('step-title').innerText    = STEP_TITLES[step - 1];
+            document.getElementById('step-progress').style.width = `${STEP_PCT[step - 1]}%`;
+
+            document.querySelectorAll('.step-dot').forEach(dot => {
+                const s = parseInt(dot.dataset.step);
+                dot.style.background = s <= step ? '#2d7a4d' : '#e5e7eb';
+                dot.style.width      = s === step ? '20px' : '6px';
+            });
+
+            document.getElementById('btn-back').style.display = step > 1 ? '' : 'none';
+            document.getElementById('btn-next').innerHTML = step === TOTAL_STEPS
+                ? '<i class="fa-solid fa-check mr-1.5"></i> Add Event'
+                : 'Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>';
+        }
+
+        function flashInvalid(el) {
+            el.style.borderColor = '#ef4444';
+            el.focus();
+            setTimeout(() => el.style.borderColor = '', 1500);
+        }
+
+        window.stepNext = () => {
+            if (currentStep === 1) {
+                if (!document.getElementById('form-date').value) { flashInvalid(document.getElementById('form-date')); return; }
+                if (!document.getElementById('form-time').value) { flashInvalid(document.getElementById('form-time')); return; }
+            }
+            if (currentStep === 2 && !document.getElementById('form-title').value.trim()) {
+                flashInvalid(document.getElementById('form-title')); return;
+            }
+            if (currentStep < TOTAL_STEPS) {
+                goToStep(currentStep + 1);
+            } else {
+                document.getElementById('event-form').dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        };
+
+        window.stepBack = () => { if (currentStep > 1) goToStep(currentStep - 1, true); };
+
         // ── MODAL ──
-        window.openModal  = () => document.getElementById('add-form-modal').style.display = 'flex';
+        window.openModal  = () => { goToStep(1); document.getElementById('add-form-modal').style.display = 'flex'; };
         window.closeModal = () => document.getElementById('add-form-modal').style.display = 'none';
         window.handleModalBackdrop = (e) => { if (e.target === document.getElementById('add-form-modal')) closeModal(); };
 
@@ -780,6 +892,7 @@
                 await saveData();
                 closeModal();
                 document.getElementById('event-form').reset();
+                goToStep(1);
             };
         }
     </script>
