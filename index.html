@@ -808,7 +808,13 @@
         window.stepBack = () => { if (currentStep > 1) goToStep(currentStep - 1, true); };
 
         // ── MODAL ──
-        window.openModal  = () => { goToStep(1); document.getElementById('add-form-modal').style.display = 'flex'; };
+        window.openModal  = () => {
+            const now = new Date();
+            document.getElementById('form-date').value = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+            document.getElementById('form-time').value = now.toTimeString().slice(0, 5);  // HH:MM
+            goToStep(1);
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
         window.closeModal = () => document.getElementById('add-form-modal').style.display = 'none';
         window.handleModalBackdrop = (e) => { if (e.target === document.getElementById('add-form-modal')) closeModal(); };
 
