@@ -202,12 +202,19 @@
             padding: 16px;
             display: flex;
             gap: 12px;
-            transition: transform .2s ease, box-shadow .2s ease;
+            transition: transform .15s ease, box-shadow .15s ease;
             animation: slideInRight .35s ease-out both;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         .spot-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 28px rgba(14,116,144,.13);
+        }
+        .spot-card.pressing {
+            transform: scale(0.97);
+            box-shadow: 0 2px 14px rgba(14,116,144,.18);
         }
         .spot-icon {
             width: 46px; height: 46px;
@@ -245,6 +252,24 @@
         }
         .cat-section-line { flex:1; height:1px; opacity:.15; }
 
+
+        /* ── PRESS ANIMATIONS ── */
+        @keyframes holdPulse {
+            0%   { box-shadow: 0 8px 28px rgba(14,116,144,.13); }
+            100% { box-shadow: 0 0 0 3px rgba(14,116,144,.22), 0 8px 28px rgba(14,116,144,.15); }
+        }
+        @keyframes cardPop {
+            0%   { transform: scale(0.972); }
+            60%  { transform: scale(1.016); }
+            100% { transform: scale(1); }
+        }
+        .card-pressing {
+            transform: scale(0.972) !important;
+            animation: holdPulse .6s ease forwards !important;
+            border-color: rgba(14,116,144,.3) !important;
+            transition: transform .12s ease !important;
+        }
+        .card-pop { animation: cardPop .3s ease forwards !important; }
 
         /* ── MISC ── */
         .input-focus { transition: border-color .2s, box-shadow .2s; }
@@ -517,6 +542,7 @@
         let activeKeyHeader = 'X-Master-Key';
         let activeFilter    = 'all';
         let selectedCategory = null;
+        let editingId       = null;
         let currentStep     = 1;
         const TOTAL_STEPS   = 4;
         const STEP_TITLES   = ['Pick a Category', 'Name & Description', 'Location', 'Pro Tip'];
@@ -712,6 +738,29 @@
                         </button>
                     </div>
                 </div>`;
+            // Long-press to edit
+            let _pt, _sx, _sy;
+            const _ps = (e) => {
+                if (e.target.closest('button, a')) return;
+                const p = e.touches ? e.touches[0] : e;
+                _sx = p.clientX; _sy = p.clientY;
+                card.classList.add('pressing');
+                _pt = setTimeout(() => { card.classList.remove('pressing'); openEditModal(spot.id); }, 600);
+            };
+            const _pm = (e) => {
+                const p = e.touches ? e.touches[0] : e;
+                if (Math.abs(p.clientX - _sx) > 8 || Math.abs(p.clientY - _sy) > 8) { clearTimeout(_pt); card.classList.remove('pressing'); }
+            };
+            const _pe = () => { clearTimeout(_pt); card.classList.remove('pressing'); };
+            card.addEventListener('touchstart',  _ps, { passive: true });
+            card.addEventListener('touchmove',   _pm, { passive: true });
+            card.addEventListener('touchend',    _pe);
+            card.addEventListener('touchcancel', _pe);
+            card.addEventListener('mousedown',   _ps);
+            card.addEventListener('mousemove',   _pm);
+            card.addEventListener('mouseup',     _pe);
+            card.addEventListener('mouseleave',  _pe);
+            card.addEventListener('contextmenu', e => e.preventDefault());
             return card;
         }
 
@@ -781,14 +830,14 @@
 
             document.getElementById('btn-back').style.display = step > 1 ? '' : 'none';
             document.getElementById('btn-next').innerHTML = step === TOTAL_STEPS
-                ? '<i class="fa-solid fa-check mr-1.5"></i> Add Spot'
+                ? (editingId ? '<i class="fa-solid fa-check mr-1.5"></i> Save Changes' : '<i class="fa-solid fa-check mr-1.5"></i> Add Spot')
                 : 'Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>';
 
             if (step === 4) {
                 const name = document.getElementById('form-name').value;
                 const loc  = document.getElementById('form-location').value;
                 document.getElementById('form-preview-text').innerText =
-                    `"${name}"${loc ? ` · ${loc}` : ''} will be saved under ${selectedCategory}.`;
+                    `"${name}"${loc ? ` · ${loc}` : ''} will be ${editingId ? 'updated' : 'saved'} under ${selectedCategory}.`;
             }
         }
 
@@ -821,6 +870,7 @@
 
         // ── MODAL ──
         window.openModal = () => {
+            editingId = null;
             selectedCategory = null;
             document.querySelectorAll('.cat-tile').forEach(t => t.classList.remove('selected'));
             document.getElementById('spot-form').reset();
@@ -832,7 +882,25 @@
             goToStep(1);
             document.getElementById('add-form-modal').style.display = 'flex';
         };
-        window.closeModal = () => document.getElementById('add-form-modal').style.display = 'none';
+        window.openEditModal = (id) => {
+            const spot = spotsData.find(s => s.id === id);
+            if (!spot) return;
+            editingId = id;
+            selectedCategory = spot.category;
+            document.querySelectorAll('.cat-tile').forEach(t => t.classList.toggle('selected', t.dataset.cat === spot.category));
+            document.getElementById('form-name').value        = spot.name;
+            document.getElementById('form-description').value = spot.description || '';
+            document.getElementById('form-location').value    = spot.location    || '';
+            document.getElementById('form-lat').value         = spot.lat         || '';
+            document.getElementById('form-lng').value         = spot.lng         || '';
+            document.getElementById('form-tip').value         = (spot.tips && spot.tips[0]) || '';
+            const btn = document.getElementById('loc-btn');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Use My Location';
+            goToStep(1);
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
+        window.closeModal = () => { editingId = null; document.getElementById('add-form-modal').style.display = 'none'; };
         window.handleModalBackdrop = (e) => { if (e.target === document.getElementById('add-form-modal')) closeModal(); };
 
         // ── GEOLOCATION ──
@@ -869,8 +937,7 @@
         // ── SUBMIT ──
         function submitSpot() {
             const tip = document.getElementById('form-tip').value.trim();
-            spotsData.push({
-                id:          crypto.randomUUID(),
+            const fields = {
                 name:        document.getElementById('form-name').value.trim(),
                 category:    selectedCategory,
                 location:    document.getElementById('form-location').value.trim(),
@@ -878,9 +945,14 @@
                 lng:         parseFloat(document.getElementById('form-lng').value) || null,
                 description: document.getElementById('form-description').value.trim(),
                 tips:        tip ? [tip] : [],
-                visited:     false,
-                addedAt:     new Date().toISOString(),
-            });
+            };
+            if (editingId) {
+                const i = spotsData.findIndex(s => s.id === editingId);
+                if (i !== -1) spotsData[i] = { ...spotsData[i], ...fields };
+                editingId = null;
+            } else {
+                spotsData.push({ id: crypto.randomUUID(), ...fields, visited: false, addedAt: new Date().toISOString() });
+            }
             saveData();
             closeModal();
         }

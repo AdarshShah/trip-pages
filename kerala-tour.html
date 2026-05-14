@@ -128,7 +128,7 @@
 
         /* ── TIMELINE ── */
         .timeline-track {
-            position:absolute; left:24px; top:0; bottom:0; width:2px;
+            position:absolute; left:36px; top:0; bottom:0; width:2px;
             background: linear-gradient(to bottom, transparent, #2d7a4d55, #2d7a4d88, #2d7a4d55, transparent);
             transform-origin:top;
             animation: drawLine 1.4s cubic-bezier(.4,0,.2,1) forwards;
@@ -136,14 +136,40 @@
         .timeline-card {
             opacity:0;
             animation: slideInRight .45s ease-out forwards;
-            transition: transform .22s ease;
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid rgba(45,122,77,.11);
+            box-shadow: 0 2px 12px rgba(45,122,77,.08);
+            padding: 12px;
+            gap: 12px;
+            cursor: pointer;
+            transition: box-shadow .22s ease, border-color .22s ease;
         }
-        .timeline-card:hover { transform: translateX(4px); }
+        .timeline-card:hover {
+            box-shadow: 0 4px 22px rgba(45,122,77,.15);
+            border-color: rgba(45,122,77,.22);
+        }
+        @keyframes holdPulse {
+            0%   { box-shadow: 0 2px 12px rgba(45,122,77,.08); }
+            100% { box-shadow: 0 0 0 3px rgba(45,122,77,.22), 0 2px 14px rgba(45,122,77,.1); }
+        }
+        @keyframes cardPop {
+            0%   { transform: scale(0.972); }
+            60%  { transform: scale(1.016); }
+            100% { transform: scale(1); }
+        }
+        .card-pressing {
+            transform: scale(0.972);
+            animation: holdPulse .6s ease forwards;
+            border-color: rgba(45,122,77,.3) !important;
+            transition: transform .12s ease, border-color .12s ease !important;
+        }
+        .card-pop { animation: cardPop .3s ease forwards !important; }
 
         /* ── DAY SEPARATOR ── */
         .day-sep {
             display:flex; align-items:center; gap:10px;
-            padding: 6px 0 14px 64px;
+            padding: 6px 0 14px 72px;
             opacity:0; animation: fadeIn .5s ease forwards;
         }
         .day-badge {
@@ -203,6 +229,22 @@
         .step-panel.active { display:block; animation: stepIn .22s ease forwards; }
         .step-panel.active.from-back { animation: stepInBack .22s ease forwards; }
         .step-dot { transition: width .25s ease, background .25s ease; border-radius:9999px; height:6px; }
+
+        /* ── EVENT CARD ── */
+        .event-card-body {
+            background: #fff;
+            border: 1px solid rgba(45,122,77,.1);
+            border-radius: 18px;
+            padding: 13px;
+            transition: transform .12s ease, box-shadow .12s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        .event-card-body.pressing {
+            transform: scale(0.97);
+            box-shadow: 0 2px 14px rgba(45,122,77,.18);
+        }
 
         /* ── MISC ── */
         .text-shadow { text-shadow: 0 2px 16px rgba(0,0,0,.4); }
@@ -489,7 +531,7 @@
             <!-- Timeline -->
             <div class="relative">
                 <div class="timeline-track"></div>
-                <div id="timeline-container" class="space-y-8"></div>
+                <div id="timeline-container" class="space-y-3"></div>
             </div>
         </main>
 
@@ -534,6 +576,8 @@
         let chartInstance  = null;
         let isSyncing      = false;
         let activeKeyHeader = 'X-Master-Key';
+        let editingId      = null;
+        let _modalOpenedAt = 0;
 
         // ── HELPERS ──
         const hideLoading = () => {
@@ -716,7 +760,7 @@
                              style="background:linear-gradient(145deg,${cfg.color},${cfg.color}bb);">
                             <i class="fa-solid ${item.icon || cfg.icon} text-sm"></i>
                         </div>
-                        <div class="ml-4 flex-1 min-w-0">
+                        <div class="event-card-body flex-1 min-w-0">
                             <div class="flex justify-between items-start mb-1 gap-2">
                                 <h3 class="font-bold text-gray-800 text-sm leading-tight">${item.title}</h3>
                                 <span class="text-[8px] font-black px-2 py-0.5 rounded-full flex-shrink-0 text-white"
@@ -726,7 +770,7 @@
                                 ${ts}${item.detail ? ` • ${item.detail}` : ''}
                             </p>
                             ${locHTML}${commentsHTML}${tipsHTML}
-                            <div class="rounded-xl px-3 py-2 border border-gray-100 bg-white flex justify-between items-center">
+                            <div class="rounded-xl px-3 py-2 bg-gray-50 flex justify-between items-center mt-1">
                                 <button onclick="deleteItem('${item.id}')"
                                         class="text-gray-300 hover:text-red-500 p-1 -ml-1 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
                                     <i class="fa-solid fa-trash-can text-[11px]"></i>
@@ -740,11 +784,41 @@
                                           style="color:${cfg.color};opacity:.55;">₹</span>
                                     <input type="number" value="${item.cost}"
                                            onchange="updateItemCost('${item.id}', this.value)"
-                                           class="w-24 pl-5 pr-2 py-1.5 bg-gray-50 border border-gray-100 rounded-lg text-[11px] outline-none font-bold transition-all focus:bg-white focus:border-gray-300"
+                                           class="w-24 pl-5 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-[11px] outline-none font-bold transition-all focus:border-gray-300"
                                            style="color:${cfg.color};">
                                 </div>
                             </div>
                         </div>`;
+                    // Long-press to edit
+                    const cb = card.querySelector('.event-card-body');
+                    let _pt, _sx, _sy, _held = false;
+                    const _ps = (e) => {
+                        if (e.target.closest('button, input, a')) return;
+                        const p = e.touches ? e.touches[0] : e;
+                        _sx = p.clientX; _sy = p.clientY;
+                        _held = false;
+                        cb.classList.add('pressing');
+                        _pt = setTimeout(() => { _held = true; cb.classList.remove('pressing'); openEditModal(item.id); }, 600);
+                    };
+                    const _pm = (e) => {
+                        const p = e.touches ? e.touches[0] : e;
+                        if (Math.abs(p.clientX - _sx) > 8 || Math.abs(p.clientY - _sy) > 8) { clearTimeout(_pt); cb.classList.remove('pressing'); }
+                    };
+                    const _pe = (e) => {
+                        if (_held && e && e.cancelable) e.preventDefault();
+                        _held = false;
+                        clearTimeout(_pt);
+                        cb.classList.remove('pressing');
+                    };
+                    card.addEventListener('touchstart',  _ps, { passive: true });
+                    card.addEventListener('touchmove',   _pm, { passive: true });
+                    card.addEventListener('touchend',    _pe);
+                    card.addEventListener('touchcancel', _pe);
+                    card.addEventListener('mousedown',   _ps);
+                    card.addEventListener('mousemove',   _pm);
+                    card.addEventListener('mouseup',     _pe);
+                    card.addEventListener('mouseleave',  _pe);
+                    card.addEventListener('contextmenu', e => e.preventDefault());
                     container.appendChild(card);
                     idx++;
                 });
@@ -792,7 +866,7 @@
 
             document.getElementById('btn-back').style.display = step > 1 ? '' : 'none';
             document.getElementById('btn-next').innerHTML = step === TOTAL_STEPS
-                ? '<i class="fa-solid fa-check mr-1.5"></i> Add Event'
+                ? (editingId ? '<i class="fa-solid fa-check mr-1.5"></i> Save Changes' : '<i class="fa-solid fa-check mr-1.5"></i> Add Event')
                 : 'Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>';
         }
 
@@ -820,15 +894,38 @@
         window.stepBack = () => { if (currentStep > 1) goToStep(currentStep - 1, true); };
 
         // ── MODAL ──
-        window.openModal  = () => {
+        window.openModal = () => {
+            editingId = null;
+            document.getElementById('event-form').reset();
             const now = new Date();
-            document.getElementById('form-date').value = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
-            document.getElementById('form-time').value = now.toTimeString().slice(0, 5);  // HH:MM
+            document.getElementById('form-date').value = now.toLocaleDateString('en-CA');
+            document.getElementById('form-time').value = now.toTimeString().slice(0, 5);
             goToStep(1);
+            _modalOpenedAt = Date.now();
             document.getElementById('add-form-modal').style.display = 'flex';
         };
-        window.closeModal = () => document.getElementById('add-form-modal').style.display = 'none';
-        window.handleModalBackdrop = (e) => { if (e.target === document.getElementById('add-form-modal')) closeModal(); };
+        window.openEditModal = (id) => {
+            const item = itineraryData.find(x => x.id === id);
+            if (!item) return;
+            editingId = id;
+            document.getElementById('form-category').value = item.category;
+            document.getElementById('form-date').value     = item.date;
+            document.getElementById('form-time').value     = item.time;
+            document.getElementById('form-title').value    = item.title;
+            document.getElementById('form-detail').value   = item.detail   || '';
+            document.getElementById('form-location').value = item.location || '';
+            document.getElementById('form-comments').value = item.comments || '';
+            document.getElementById('form-cost').value     = item.cost     || '';
+            document.getElementById('form-tip').value      = (item.tips && item.tips[0]) || '';
+            goToStep(1);
+            _modalOpenedAt = Date.now();
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
+        window.closeModal = () => { editingId = null; document.getElementById('add-form-modal').style.display = 'none'; };
+        window.handleModalBackdrop = (e) => {
+            if (Date.now() - _modalOpenedAt < 350) return;
+            if (e.target === document.getElementById('add-form-modal')) closeModal();
+        };
 
         // ── BUDGET CHART ──
         function updateBudgetChart() {
@@ -895,8 +992,7 @@
             document.getElementById('event-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const tip = document.getElementById('form-tip').value;
-                itineraryData.push({
-                    id:       crypto.randomUUID(),
+                const fields = {
                     category: document.getElementById('form-category').value,
                     date:     document.getElementById('form-date').value,
                     time:     document.getElementById('form-time').value,
@@ -906,7 +1002,14 @@
                     comments: document.getElementById('form-comments').value || '',
                     cost:     parseFloat(document.getElementById('form-cost').value) || 0,
                     tips:     tip ? [tip] : []
-                });
+                };
+                if (editingId) {
+                    const i = itineraryData.findIndex(x => x.id === editingId);
+                    if (i !== -1) itineraryData[i] = { ...itineraryData[i], ...fields };
+                    editingId = null;
+                } else {
+                    itineraryData.push({ id: crypto.randomUUID(), ...fields });
+                }
                 await saveData();
                 closeModal();
                 document.getElementById('event-form').reset();
