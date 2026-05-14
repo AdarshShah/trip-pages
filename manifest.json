@@ -2,7 +2,7 @@
   "name": "My Apps",
   "short_name": "My Apps",
   "description": "Personal app hub",
-  "start_url": "/",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0c0f14",
   "theme_color": "#0c0f14",
