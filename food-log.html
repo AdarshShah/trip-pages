@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adarsh & Himu's Food Log</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans:   ['Inter', 'sans-serif'],
+                        serif:  ['Playfair Display', 'serif'],
+                        header: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ── ANIMATIONS ── */
+        @keyframes float {
+            0%,100% { transform: translateY(0) rotate(0deg); }
+            33%      { transform: translateY(-12px) rotate(5deg); }
+            66%      { transform: translateY(-6px) rotate(-3deg); }
+        }
+        @keyframes slideInRight {
+            from { opacity:0; transform:translateX(20px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes slideInUp {
+            from { opacity:0; transform:translateY(18px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity:0; } to { opacity:1; }
+        }
+        @keyframes ripple {
+            0%   { transform:scale(1);   opacity:.6; }
+            100% { transform:scale(2.8); opacity:0; }
+        }
+        @keyframes spinRing {
+            to { transform:rotate(360deg); }
+        }
+        @keyframes glowPulse {
+            0%,100% { box-shadow: 0 0 18px rgba(249,115,22,.35); }
+            50%      { box-shadow: 0 0 44px rgba(249,115,22,.75); }
+        }
+        @keyframes bounceDot {
+            0%,80%,100% { transform:translateY(0); }
+            40%          { transform:translateY(-7px); }
+        }
+        @keyframes stepIn {
+            from { opacity:0; transform:translateX(20px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes stepInBack {
+            from { opacity:0; transform:translateX(-20px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes holdPulse {
+            0%   { box-shadow: 0 2px 12px rgba(234,88,12,.07); }
+            100% { box-shadow: 0 0 0 3px rgba(234,88,12,.2), 0 2px 14px rgba(234,88,12,.1); }
+        }
+        @keyframes cardPop {
+            0%   { transform: scale(0.972); }
+            60%  { transform: scale(1.018); }
+            100% { transform: scale(1); }
+        }
+        @keyframes toastIn {
+            from { opacity:0; transform:translateX(-50%) translateY(16px); }
+            to   { opacity:1; transform:translateX(-50%) translateY(0); }
+        }
+
+        /* ── BASE ── */
+        body {
+            background: linear-gradient(160deg, #fff7ed 0%, #fef3c7 40%, #fffbeb 100%);
+            background-attachment: fixed;
+        }
+
+        /* ── LOADING ── */
+        .loading-overlay {
+            position:fixed; inset:0; z-index:1000;
+            background: linear-gradient(145deg, #7c2d12 0%, #c2410c 55%, #ea580c 100%);
+            display:flex; align-items:center; justify-content:center;
+            transition: opacity .5s ease;
+        }
+        .loader-ring {
+            width:56px; height:56px;
+            border:3px solid rgba(255,255,255,.2);
+            border-top-color:#fff;
+            border-radius:50%;
+            animation: spinRing .75s linear infinite;
+        }
+        .bounce-dot { animation: bounceDot 1.2s ease-in-out infinite; }
+
+        /* ── GLASS ── */
+        .glass-card {
+            background: rgba(255,255,255,.96);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(234,88,12,.11);
+            box-shadow: 0 4px 28px rgba(234,88,12,.08);
+        }
+
+        /* ── HERO ── */
+        .hero-bg {
+            background: linear-gradient(160deg, #7c2d12 0%, #c2410c 45%, #ea580c 75%, #f97316 100%);
+        }
+        .hero-glow {
+            position:absolute; top:20px; right:26px;
+            width:54px; height:54px;
+            background: radial-gradient(circle, rgba(251,191,36,.95) 0%, rgba(245,158,11,.5) 45%, transparent 72%);
+            border-radius:50%;
+            animation: glowPulse 3s ease-in-out infinite;
+        }
+        .floating-food {
+            position:absolute; opacity:.22;
+            animation: float var(--dur,5s) ease-in-out infinite;
+            animation-delay: var(--del,0s);
+            user-select:none; pointer-events:none;
+        }
+
+        /* ── MODAL ── */
+        #add-form-modal {
+            display:none;
+            background: rgba(0,0,0,.55);
+            backdrop-filter: blur(5px);
+        }
+        .modal-sheet {
+            animation: slideInUp .28s cubic-bezier(.34,1.5,.64,1) forwards;
+        }
+
+        /* ── STEP FORM ── */
+        .step-panel { display:none; }
+        .step-panel.active { display:block; animation: stepIn .22s ease forwards; }
+        .step-panel.active.from-back { animation: stepInBack .22s ease forwards; }
+        .step-dot { transition: width .25s ease, background .25s ease; border-radius:9999px; height:6px; }
+
+        /* ── MEAL TAG CHIPS ── */
+        .meal-chip {
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            padding: 10px 8px; border-radius: 14px; cursor:pointer;
+            border: 2px solid transparent;
+            transition: all .18s ease;
+            user-select:none;
+            font-size:11px; font-weight:700; gap:4px;
+        }
+        .meal-chip:active { transform: scale(.94); }
+        .meal-chip.selected { transform: scale(1.04); }
+        .meal-chip .chip-emoji { font-size:20px; line-height:1; }
+
+        /* ── WHO CARDS ── */
+        .who-card {
+            flex:1; padding:16px 12px; border-radius:18px; cursor:pointer;
+            border: 2px solid transparent;
+            background: #f9fafb;
+            display:flex; flex-direction:column; align-items:center; gap:8px;
+            transition: all .2s ease;
+            user-select:none;
+        }
+        .who-card:active { transform: scale(.95); }
+        .who-card.selected { transform: scale(1.04); }
+        .who-card .avatar { font-size:32px; }
+        .who-card .who-name { font-size:13px; font-weight:800; letter-spacing:.02em; }
+
+        /* ── FOOD ENTRY CARD ── */
+        .entry-card {
+            opacity:0;
+            animation: slideInRight .4s ease forwards;
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid rgba(234,88,12,.1);
+            box-shadow: 0 2px 12px rgba(234,88,12,.07);
+            padding: 14px;
+            transition: transform .12s ease, box-shadow .12s ease;
+            user-select:none;
+            -webkit-user-select:none;
+            -webkit-touch-callout:none;
+            cursor:pointer;
+        }
+        .entry-card.pressing {
+            transform: scale(0.972);
+            animation: holdPulse .6s ease forwards;
+            border-color: rgba(234,88,12,.28) !important;
+            transition: transform .12s ease, border-color .12s ease !important;
+        }
+        .entry-card-pop { animation: cardPop .3s ease forwards !important; }
+
+        /* ── DAY SEPARATOR ── */
+        .day-sep {
+            display:flex; align-items:center; gap:10px;
+            padding: 4px 0 12px 0;
+            opacity:0; animation: fadeIn .45s ease forwards;
+        }
+        .day-badge {
+            background: linear-gradient(135deg, #c2410c, #ea580c);
+            color:#fff; font-size:9px; font-weight:800;
+            letter-spacing:.14em; text-transform:uppercase;
+            padding:4px 12px; border-radius:100px;
+            white-space:nowrap; flex-shrink:0;
+            box-shadow: 0 2px 8px rgba(194,65,12,.35);
+        }
+        .day-line { flex:1; height:1px; background: linear-gradient(to right, rgba(234,88,12,.25), transparent); }
+
+        /* ── FAB ── */
+        .fab {
+            position:fixed; bottom:24px; right:24px;
+            width:58px; height:58px;
+            background: linear-gradient(135deg, #c2410c, #ea580c);
+            border-radius:50%; border:none; color:#fff; font-size:20px;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; z-index:80;
+            box-shadow: 0 8px 26px rgba(194,65,12,.48);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .fab::before {
+            content:''; position:absolute; inset:0; border-radius:50%;
+            background:inherit; animation: ripple 2.4s ease-out infinite;
+        }
+        .fab:hover { transform:scale(1.1); box-shadow:0 12px 36px rgba(194,65,12,.55); }
+        .fab:active { transform:scale(.93); }
+
+        /* ── TOAST ── */
+        .toast {
+            position:fixed; bottom:28px; left:50%;
+            transform:translateX(-50%) translateY(20px);
+            background: rgba(28,18,8,.92);
+            color:#fff; padding:11px 22px; border-radius:100px;
+            font-size:12px; font-weight:600; letter-spacing:.01em;
+            z-index:999; white-space:nowrap;
+            border:1px solid rgba(249,115,22,.3);
+            opacity:0; pointer-events:none;
+            transition: opacity .25s ease, transform .25s ease;
+            backdrop-filter: blur(12px);
+        }
+        .toast.show {
+            opacity:1; transform:translateX(-50%) translateY(0);
+        }
+
+        /* ── INPUT FOCUS ── */
+        .input-focus { transition: border-color .2s, box-shadow .2s; }
+        .input-focus:focus { border-color:#ea580c; box-shadow:0 0 0 3px rgba(234,88,12,.12); outline:none; }
+
+        /* ── MISC ── */
+        .text-shadow { text-shadow: 0 2px 18px rgba(0,0,0,.4); }
+    </style>
+</head>
+<body class="font-sans text-gray-800 flex flex-col items-center p-0 sm:p-4 min-h-screen">
+
+    <!-- ═══ LOADING SCREEN ═══ -->
+    <div id="loading-screen" class="loading-overlay">
+        <div class="text-center">
+            <div class="text-4xl mb-5">🍽️</div>
+            <div class="loader-ring mx-auto mb-5"></div>
+            <p class="text-[11px] font-bold text-white/70 uppercase tracking-[.22em] mb-3">Loading your food log…</p>
+            <div class="flex justify-center space-x-1.5">
+                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:0s"></span>
+                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:.18s"></span>
+                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:.36s"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ ADD / EDIT MODAL ═══ -->
+    <div id="add-form-modal" class="fixed inset-0 z-[100] items-center justify-center p-4" onclick="handleModalBackdrop(event)">
+        <div class="modal-sheet glass-card w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" id="modal-inner">
+
+            <!-- Step Header -->
+            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(135deg,#fff7ed,#fff);">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.18em] mb-0.5" id="step-label">Step 1 of 3</p>
+                        <h2 class="text-lg font-serif" style="color:#7c2d12" id="step-title">What did you eat?</h2>
+                    </div>
+                    <button onclick="closeModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shadow-sm">
+                        <i class="fa-solid fa-times text-sm"></i>
+                    </button>
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                    <div id="step-progress" class="h-full rounded-full transition-all duration-300" style="background:linear-gradient(90deg,#c2410c,#f97316);width:33%;"></div>
+                </div>
+                <!-- Step dots -->
+                <div class="flex justify-center gap-2">
+                    <div class="step-dot" data-step="1" style="width:20px;background:#c2410c;"></div>
+                    <div class="step-dot" data-step="2" style="width:6px;background:#e5e7eb;"></div>
+                    <div class="step-dot" data-step="3" style="width:6px;background:#e5e7eb;"></div>
+                </div>
+            </div>
+
+            <!-- Form Body -->
+            <form id="food-form" class="px-6 pb-6">
+
+                <!-- Step 1: Food Item -->
+                <div class="step-panel active" data-step="1">
+                    <div class="space-y-4 py-5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Food Item <span class="text-red-400 normal-case font-normal">*required</span></label>
+                            <input type="text" id="form-food" placeholder="e.g., Masala Dosa"
+                                   class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Notes <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <input type="text" id="form-notes" placeholder="e.g., from MTR restaurant"
+                                   class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: When & Meal Type -->
+                <div class="step-panel" data-step="2">
+                    <div class="space-y-4 py-5">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Date</label>
+                                <input type="date" id="form-date" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Time</label>
+                                <input type="time" id="form-time" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5">Meal Type <span class="text-red-400 normal-case font-normal">*required</span></label>
+                            <div class="grid grid-cols-5 gap-2" id="meal-tag-grid">
+                                <!-- chips rendered by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Who Ate -->
+                <div class="step-panel" data-step="3">
+                    <div class="py-5">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Who ate it? <span class="text-red-400 normal-case font-normal">*at least one</span></label>
+                        <div class="flex gap-3" id="who-grid">
+                            <div class="who-card" data-who="Adarsh" onclick="toggleWho('Adarsh')">
+                                <div class="avatar">👦</div>
+                                <div class="who-name" style="color:#c2410c;">Adarsh</div>
+                            </div>
+                            <div class="who-card" data-who="Himu" onclick="toggleWho('Himu')">
+                                <div class="avatar">👧</div>
+                                <div class="who-name" style="color:#7c3aed;">Himu</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="flex gap-3 pt-2 border-t border-gray-100">
+                    <button type="button" id="btn-back" onclick="stepBack()"
+                            class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                            style="display:none;">
+                        <i class="fa-solid fa-arrow-left text-sm"></i>
+                    </button>
+                    <button type="button" id="btn-next" onclick="stepNext()"
+                            class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95 shadow-md"
+                            style="background:linear-gradient(135deg,#c2410c,#ea580c);">
+                        Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ MAIN CONTAINER ═══ -->
+    <div class="w-full max-w-md bg-white relative overflow-hidden sm:rounded-3xl flex flex-col min-h-screen sm:min-h-0"
+         style="box-shadow:0 32px 90px rgba(0,0,0,.16);">
+
+        <!-- ── HERO HEADER ── -->
+        <header class="hero-bg relative w-full overflow-hidden" style="height:272px;">
+
+            <!-- Glow orb -->
+            <div class="hero-glow"></div>
+
+            <!-- Dot grid overlay -->
+            <div class="absolute inset-0 pointer-events-none"
+                 style="background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.07) 1px,transparent 0);background-size:24px 24px;"></div>
+
+            <!-- Floating food -->
+            <div class="floating-food" style="top:10%;left:6%;font-size:24px;--dur:5.2s;--del:0s">🍜</div>
+            <div class="floating-food" style="top:25%;right:10%;font-size:18px;--dur:6.5s;--del:1.2s">🥗</div>
+            <div class="floating-food" style="top:55%;left:16%;font-size:15px;--dur:4.9s;--del:2.4s">🍱</div>
+            <div class="floating-food" style="top:35%;right:4%;font-size:20px;--dur:7.0s;--del:.7s">🍛</div>
+            <div class="floating-food" style="top:65%;left:3%;font-size:13px;--dur:5.7s;--del:1.9s">🥘</div>
+            <div class="floating-food" style="top:15%;left:40%;font-size:14px;--dur:6.1s;--del:3.1s">🍲</div>
+
+            <!-- Wave SVG bottom -->
+            <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 400 72" preserveAspectRatio="none">
+                <path d="M0 72 L0 46 L50 28 L95 46 L140 16 L185 38 L230 8 L275 32 L320 18 L365 38 L400 26 L400 72 Z"
+                      fill="rgba(255,255,255,.05)"/>
+                <path d="M0 72 L0 56 L60 40 L115 56 L165 34 L215 50 L265 26 L310 46 L355 36 L400 46 L400 72 Z"
+                      fill="rgba(255,255,255,.08)"/>
+                <path d="M0 72 L0 64 L100 54 L200 62 L300 54 L400 60 L400 72 Z"
+                      fill="rgba(255,255,255,.05)"/>
+            </svg>
+
+            <!-- Hero content -->
+            <div class="absolute bottom-0 left-0 w-full px-8 pb-9 z-10">
+                <div class="mb-3" style="animation:slideInUp .6s ease-out .1s both">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black tracking-[.15em] uppercase shadow-lg"
+                          style="background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#451a03;">
+                        ✦ The Food Diaries ✦
+                    </span>
+                </div>
+                <h1 class="text-[34px] font-serif text-white leading-tight mb-2 text-shadow"
+                    style="animation:slideInUp .6s ease-out .22s both;">
+                    Adarsh &amp; Himu's<br><em>Food Log</em>
+                </h1>
+                <p class="text-white/80 font-medium tracking-wide flex items-center text-sm"
+                   style="animation:slideInUp .6s ease-out .34s both;">
+                    Adarsh
+                    <span class="mx-2 inline-flex items-center justify-center w-5 h-5 rounded-full"
+                          style="background:rgba(239,68,68,.25);">
+                        <i class="fa-solid fa-heart text-red-400" style="font-size:8px;"></i>
+                    </span>
+                    Himu
+                </p>
+            </div>
+        </header>
+
+        <!-- ── SUMMARY CARD ── -->
+        <div class="px-5 -mt-10 relative z-20">
+            <div class="glass-card rounded-2xl p-5">
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Today</p>
+                        <p id="stat-today" class="text-2xl font-header font-black" style="color:#c2410c;">0</p>
+                        <p class="text-[9px] text-gray-400 font-medium">meals</p>
+                    </div>
+                    <div class="text-center border-x border-gray-100">
+                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">👦 Adarsh</p>
+                        <p id="stat-adarsh" class="text-2xl font-header font-black" style="color:#ea580c;">0</p>
+                        <p class="text-[9px] text-gray-400 font-medium">today</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">👧 Himu</p>
+                        <p id="stat-himu" class="text-2xl font-header font-black" style="color:#7c3aed;">0</p>
+                        <p class="text-[9px] text-gray-400 font-medium">today</p>
+                    </div>
+                </div>
+                <div id="sync-status" class="flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-3 border-t border-gray-100/80">
+                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400 mr-2 animate-pulse"></span>
+                    <span id="sync-text">Connecting…</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── MAIN CONTENT ── -->
+        <main class="flex-1 px-5 py-6">
+
+            <!-- Warning: Firebase not configured -->
+            <div id="setup-warning" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-[11px] font-medium leading-relaxed">
+                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-500"></i>
+                <strong>Firebase Setup Required</strong> — replace <code class="bg-amber-100 px-1 rounded text-[10px]">YOUR_PROJECT_ID</code> with your Firebase project. Running in offline mode.
+            </div>
+
+            <!-- Log Header -->
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-sm font-black text-gray-700 uppercase tracking-widest">Food Log</h2>
+                    <p id="entry-count" class="text-[10px] text-gray-400 mt-0.5">0 entries</p>
+                </div>
+                <button onclick="openModal()"
+                        class="flex items-center text-xs font-bold px-3.5 py-2 rounded-xl transition-all active:scale-95"
+                        style="background:linear-gradient(135deg,#fff7ed,#ffedd5);color:#7c2d12;border:1px solid rgba(234,88,12,.2);">
+                    <i class="fa-solid fa-plus mr-1.5" style="color:#ea580c;"></i>Add Entry
+                </button>
+            </div>
+
+            <!-- Food Log Container -->
+            <div id="log-container"></div>
+
+        </main>
+
+        <!-- ── FOOTER ── -->
+        <footer class="px-6 py-7 text-center border-t border-orange-50"
+                style="background:linear-gradient(180deg,#fffbeb,#fff7ed);">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <div class="h-px w-8" style="background:linear-gradient(to right,transparent,rgba(234,88,12,.3));"></div>
+                <span style="font-size:10px;opacity:.4;">🍽️</span>
+                <div class="h-px w-8" style="background:linear-gradient(to left,transparent,rgba(234,88,12,.3));"></div>
+            </div>
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.25em] mb-1">Food Log • v1.0</p>
+            <p class="text-xs text-gray-500 font-medium italic mb-4">Eat well, live well — Adarsh &amp; Himu 🍜</p>
+            <button onclick="fetchData(true)"
+                    class="inline-flex items-center px-5 py-2.5 bg-white rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-orange-50 transition-all active:scale-95 shadow-sm"
+                    style="border:1px solid rgba(234,88,12,.22);color:#7c2d12;">
+                <i class="fa-solid fa-rotate mr-1.5"></i>Sync Now
+            </button>
+        </footer>
+    </div>
+
+    <!-- ── FAB ── -->
+    <button onclick="openModal()" class="fab"><i class="fa-solid fa-plus"></i></button>
+
+    <!-- ── TOAST ── -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ════════════════════════════════════════════════════════════
+        //  FIREBASE CONFIG — replace YOUR_PROJECT_ID with your project
+        // ════════════════════════════════════════════════════════════
+        const FIREBASE_BASE = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const FIREBASE_URL  = FIREBASE_BASE.replace(/\/$/, '') + '/foodlog';
+        const isConfigured  = !FIREBASE_BASE.includes('YOUR_PROJECT_ID');
+        const LOCAL_KEY     = 'food_log_offline_data';
+
+        // ── MEAL TAGS ──
+        const TAGS = {
+            Breakfast: { emoji:'🌅', color:'#d97706', bg:'#fef3c7', border:'#fcd34d', label:'Breakfast' },
+            Lunch:     { emoji:'☀️', color:'#ea580c', bg:'#fff7ed', border:'#fdba74', label:'Lunch'     },
+            Snack:     { emoji:'🍎', color:'#16a34a', bg:'#f0fdf4', border:'#86efac', label:'Snack'     },
+            Dinner:    { emoji:'🌙', color:'#4f46e5', bg:'#eef2ff', border:'#a5b4fc', label:'Dinner'    },
+            Midnight:  { emoji:'🌌', color:'#475569', bg:'#f8fafc', border:'#cbd5e1', label:'Midnight'  }
+        };
+
+        // ── STATE ──
+        let foodData    = {};   // { id: entry }
+        let isSyncing   = false;
+        let editingId   = null;
+        let selectedTag = null;
+        let selectedWho = [];
+        let _modalOpenedAt = 0;
+
+        // ── HELPERS ──
+        const hideLoading = () => {
+            const el = document.getElementById('loading-screen');
+            if (!el) return;
+            el.style.opacity = '0';
+            setTimeout(() => el.style.display = 'none', 500);
+        };
+        const updateStatus = (text, dotCls) => {
+            document.getElementById('sync-text').textContent = text;
+            document.getElementById('sync-dot').className = `w-2 h-2 rounded-full mr-2 ${dotCls}`;
+        };
+        let _toastTimer;
+        const showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+        };
+        const fmtTime = (time) => {
+            if (!time) return '';
+            const [h, m] = time.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hh   = h % 12 || 12;
+            return `${hh}:${String(m).padStart(2,'0')} ${ampm}`;
+        };
+        const todayStr = () => new Date().toLocaleDateString('en-CA');
+        const yestStr  = () => {
+            const d = new Date(); d.setDate(d.getDate() - 1);
+            return d.toLocaleDateString('en-CA');
+        };
+        const fmtDateLabel = (dateStr) => {
+            if (dateStr === todayStr()) return 'Today';
+            if (dateStr === yestStr())  return 'Yesterday';
+            const d = new Date(dateStr + 'T12:00:00');
+            return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }).toUpperCase();
+        };
+
+        // ── INIT ──
+        window.onload = () => {
+            if (!isConfigured) document.getElementById('setup-warning').classList.remove('hidden');
+            buildMealChips();
+            fetchData();
+            if (isConfigured) setInterval(() => fetchData(false), 15000);
+        };
+
+        // ── FETCH ──
+        window.fetchData = async (manual = false) => {
+            if (isSyncing) return;
+            isSyncing = true;
+            if (manual) updateStatus('Syncing…', 'bg-blue-400 animate-pulse');
+            try {
+                if (!isConfigured) {
+                    const raw = localStorage.getItem(LOCAL_KEY);
+                    foodData = raw ? JSON.parse(raw) : {};
+                    updateStatus('Offline Mode', 'bg-amber-500');
+                } else {
+                    const res = await fetch(`${FIREBASE_URL}.json`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    foodData = data || {};
+                    updateStatus('Cloud Synced', 'bg-emerald-500');
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                const raw = localStorage.getItem(LOCAL_KEY);
+                foodData = raw ? JSON.parse(raw) : {};
+                updateStatus('Sync Failed', 'bg-red-500');
+            } finally {
+                isSyncing = false;
+                renderLog();
+                hideLoading();
+            }
+        };
+
+        // ── SAVE ──
+        const saveLocal = () => localStorage.setItem(LOCAL_KEY, JSON.stringify(foodData));
+
+        const pushEntry = async (id, entry) => {
+            if (!isConfigured) { foodData[id] = entry; saveLocal(); renderLog(); return; }
+            updateStatus('Saving…', 'bg-blue-400 animate-pulse');
+            try {
+                const res = await fetch(`${FIREBASE_URL}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [id]: entry })
+                });
+                if (!res.ok) throw new Error('Save failed');
+                foodData[id] = entry;
+                saveLocal();
+                updateStatus('Cloud Synced', 'bg-emerald-500');
+                showToast('✓ Entry saved');
+            } catch (err) {
+                console.error('Save error:', err);
+                updateStatus('Save Error', 'bg-red-500');
+                showToast('⚠ Save failed — stored locally');
+                foodData[id] = entry; saveLocal();
+            }
+            renderLog();
+        };
+
+        window.deleteEntry = async (id, evt) => {
+            if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+            if (!confirm('Delete this entry?')) return;
+            delete foodData[id];
+            saveLocal();
+            if (isConfigured) {
+                try {
+                    await fetch(`${FIREBASE_URL}/${id}.json`, { method: 'DELETE' });
+                    updateStatus('Cloud Synced', 'bg-emerald-500');
+                    showToast('Entry deleted');
+                } catch { showToast('Deleted locally'); }
+            } else {
+                showToast('Entry deleted');
+            }
+            renderLog();
+        };
+
+        // ── RENDER LOG ──
+        function renderLog() {
+            const container = document.getElementById('log-container');
+            container.innerHTML = '';
+
+            const entries = Object.values(foodData).filter(e => e && e.food);
+            entries.sort((a, b) => {
+                const da = new Date(`${a.date}T${a.time || '00:00'}`);
+                const db = new Date(`${b.date}T${b.time || '00:00'}`);
+                return db - da;
+            });
+
+            // Stats for today
+            const td = todayStr();
+            const todayEntries = entries.filter(e => e.date === td);
+            document.getElementById('stat-today').textContent   = todayEntries.length;
+            document.getElementById('stat-adarsh').textContent  = todayEntries.filter(e => e.who?.includes('Adarsh')).length;
+            document.getElementById('stat-himu').textContent    = todayEntries.filter(e => e.who?.includes('Himu')).length;
+            document.getElementById('entry-count').textContent  =
+                `${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`;
+
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16" style="animation:fadeIn .5s ease both;">
+                        <div class="text-5xl mb-4">🍽️</div>
+                        <p class="text-sm font-bold text-gray-400">No entries yet</p>
+                        <p class="text-xs text-gray-300 mt-1">Log your first meal!</p>
+                    </div>`;
+                return;
+            }
+
+            // Group by date
+            const groups = {};
+            entries.forEach(e => { (groups[e.date] ??= []).push(e); });
+            const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+            let animIdx = 0;
+            dates.forEach(dateKey => {
+                // Day separator
+                const sep = document.createElement('div');
+                sep.className = 'day-sep';
+                sep.style.animationDelay = `${animIdx * 0.06}s`;
+                sep.innerHTML = `<span class="day-badge">${fmtDateLabel(dateKey)}</span><div class="day-line"></div>`;
+                container.appendChild(sep);
+
+                groups[dateKey].forEach(entry => {
+                    const tag   = TAGS[entry.tag] || TAGS['Snack'];
+                    const whoHtml = (entry.who || []).map(w => {
+                        const isA = w === 'Adarsh';
+                        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                      style="background:${isA ? '#fff7ed' : '#f5f3ff'};color:${isA ? '#c2410c' : '#7c3aed'};border:1px solid ${isA ? '#fdba74' : '#c4b5fd'};">
+                                    ${isA ? '👦' : '👧'} ${w}
+                                </span>`;
+                    }).join('');
+
+                    const card = document.createElement('div');
+                    card.className = 'entry-card mb-3';
+                    card.style.animationDelay = `${animIdx * 0.07}s`;
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-gray-800 text-sm leading-tight truncate">${entry.food}</p>
+                                ${entry.notes ? `<p class="text-[11px] text-gray-400 italic mt-0.5 truncate">${entry.notes}</p>` : ''}
+                            </div>
+                            <span class="text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 border"
+                                  style="color:${tag.color};background:${tag.bg};border-color:${tag.border};">
+                                ${tag.emoji} ${tag.label}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between mt-2.5">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${whoHtml}
+                            </div>
+                            <span class="text-[10px] font-bold text-gray-400 flex-shrink-0">
+                                <i class="fa-regular fa-clock mr-1 text-[9px]"></i>${fmtTime(entry.time)}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-50">
+                            <button onclick="deleteEntry('${entry.id}', event)"
+                                    class="text-gray-300 hover:text-red-500 p-1 -ml-1 rounded-lg hover:bg-red-50 transition-colors"
+                                    title="Delete">
+                                <i class="fa-solid fa-trash-can text-[11px]"></i>
+                            </button>
+                            <button onclick="openEditModal('${entry.id}')"
+                                    class="text-gray-300 hover:text-orange-500 p-1 -mr-1 rounded-lg hover:bg-orange-50 transition-colors"
+                                    title="Edit">
+                                <i class="fa-solid fa-pen text-[11px]"></i>
+                            </button>
+                        </div>`;
+
+                    // Long-press to edit
+                    let _pt, _sx, _sy, _held = false;
+                    const _ps = (e) => {
+                        if (e.target.closest('button')) return;
+                        const p = e.touches ? e.touches[0] : e;
+                        _sx = p.clientX; _sy = p.clientY; _held = false;
+                        card.classList.add('pressing');
+                        _pt = setTimeout(() => { _held = true; card.classList.remove('pressing'); openEditModal(entry.id); }, 620);
+                    };
+                    const _pm = (e) => {
+                        const p = e.touches ? e.touches[0] : e;
+                        if (Math.abs(p.clientX-_sx) > 8 || Math.abs(p.clientY-_sy) > 8) { clearTimeout(_pt); card.classList.remove('pressing'); }
+                    };
+                    const _pe = (e) => {
+                        if (_held && e?.cancelable) e.preventDefault();
+                        _held = false; clearTimeout(_pt); card.classList.remove('pressing');
+                    };
+                    card.addEventListener('touchstart',  _ps, { passive: true });
+                    card.addEventListener('touchmove',   _pm, { passive: true });
+                    card.addEventListener('touchend',    _pe);
+                    card.addEventListener('touchcancel', _pe);
+                    card.addEventListener('mousedown',   _ps);
+                    card.addEventListener('mousemove',   _pm);
+                    card.addEventListener('mouseup',     _pe);
+                    card.addEventListener('mouseleave',  _pe);
+                    card.addEventListener('contextmenu', e => e.preventDefault());
+
+                    container.appendChild(card);
+                    animIdx++;
+                });
+            });
+        }
+
+        // ── MEAL TAG CHIPS ──
+        function buildMealChips() {
+            const grid = document.getElementById('meal-tag-grid');
+            grid.innerHTML = '';
+            Object.entries(TAGS).forEach(([key, t]) => {
+                const chip = document.createElement('div');
+                chip.className = 'meal-chip';
+                chip.dataset.tag = key;
+                chip.style.background  = t.bg;
+                chip.style.borderColor = 'transparent';
+                chip.innerHTML = `<span class="chip-emoji">${t.emoji}</span><span style="color:${t.color};">${t.label}</span>`;
+                chip.onclick = () => selectTag(key);
+                grid.appendChild(chip);
+            });
+        }
+        function selectTag(key) {
+            selectedTag = key;
+            document.querySelectorAll('.meal-chip').forEach(chip => {
+                const k = chip.dataset.tag;
+                const t = TAGS[k];
+                if (k === key) {
+                    chip.classList.add('selected');
+                    chip.style.borderColor = t.color;
+                    chip.style.boxShadow   = `0 0 0 2px ${t.color}33`;
+                } else {
+                    chip.classList.remove('selected');
+                    chip.style.borderColor = 'transparent';
+                    chip.style.boxShadow   = 'none';
+                }
+            });
+        }
+
+        // ── WHO CARDS ──
+        window.toggleWho = (name) => {
+            const idx = selectedWho.indexOf(name);
+            if (idx === -1) selectedWho.push(name);
+            else selectedWho.splice(idx, 1);
+            document.querySelectorAll('.who-card').forEach(card => {
+                const w = card.dataset.who;
+                const isA = w === 'Adarsh';
+                if (selectedWho.includes(w)) {
+                    card.classList.add('selected');
+                    card.style.borderColor  = isA ? '#c2410c' : '#7c3aed';
+                    card.style.background   = isA ? '#fff7ed' : '#f5f3ff';
+                    card.style.boxShadow    = `0 4px 16px ${isA ? 'rgba(194,65,12,.18)' : 'rgba(124,58,237,.18)'}`;
+                } else {
+                    card.classList.remove('selected');
+                    card.style.borderColor = 'transparent';
+                    card.style.background  = '#f9fafb';
+                    card.style.boxShadow   = 'none';
+                }
+            });
+        };
+
+        // ── STEP NAVIGATION ──
+        let currentStep = 1;
+        const TOTAL_STEPS = 3;
+        const STEP_TITLES = ['What did you eat?', 'When & Meal Type', 'Who ate it?'];
+        const STEP_PCT    = [33, 66, 100];
+
+        function goToStep(step, fromBack = false) {
+            const prev = document.querySelector(`.step-panel[data-step="${currentStep}"]`);
+            const next = document.querySelector(`.step-panel[data-step="${step}"]`);
+            prev.classList.remove('active');
+            next.classList.toggle('from-back', fromBack);
+            next.classList.add('active');
+            currentStep = step;
+
+            document.getElementById('step-label').textContent    = `Step ${step} of ${TOTAL_STEPS}`;
+            document.getElementById('step-title').textContent    = STEP_TITLES[step - 1];
+            document.getElementById('step-progress').style.width = `${STEP_PCT[step - 1]}%`;
+
+            document.querySelectorAll('.step-dot').forEach(dot => {
+                const s = parseInt(dot.dataset.step);
+                dot.style.background = s <= step ? '#c2410c' : '#e5e7eb';
+                dot.style.width      = s === step ? '20px' : '6px';
+            });
+
+            document.getElementById('btn-back').style.display = step > 1 ? '' : 'none';
+            document.getElementById('btn-next').innerHTML = step === TOTAL_STEPS
+                ? (editingId ? '<i class="fa-solid fa-check mr-1.5"></i> Save Changes'
+                             : '<i class="fa-solid fa-utensils mr-1.5"></i> Log It')
+                : 'Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>';
+        }
+
+        const flashInvalid = (el) => {
+            el.style.borderColor = '#ef4444';
+            el.focus && el.focus();
+            setTimeout(() => el.style.borderColor = '', 1600);
+        };
+        const flashEl = (el) => {
+            el.style.outline = '2px solid #ef4444';
+            setTimeout(() => el.style.outline = '', 1600);
+        };
+
+        window.stepNext = () => {
+            if (currentStep === 1) {
+                const food = document.getElementById('form-food').value.trim();
+                if (!food) { flashInvalid(document.getElementById('form-food')); return; }
+            }
+            if (currentStep === 2) {
+                if (!document.getElementById('form-date').value) { flashInvalid(document.getElementById('form-date')); return; }
+                if (!document.getElementById('form-time').value) { flashInvalid(document.getElementById('form-time')); return; }
+                if (!selectedTag) {
+                    const grid = document.getElementById('meal-tag-grid');
+                    grid.style.outline = '2px solid #ef4444';
+                    grid.style.borderRadius = '12px';
+                    setTimeout(() => { grid.style.outline = ''; }, 1600);
+                    return;
+                }
+            }
+            if (currentStep < TOTAL_STEPS) {
+                goToStep(currentStep + 1);
+            } else {
+                if (selectedWho.length === 0) {
+                    const whoGrid = document.getElementById('who-grid');
+                    whoGrid.style.outline = '2px solid #ef4444';
+                    whoGrid.style.borderRadius = '20px';
+                    setTimeout(() => { whoGrid.style.outline = ''; }, 1600);
+                    return;
+                }
+                document.getElementById('food-form').dispatchEvent(new Event('submit', { cancelable:true }));
+            }
+        };
+        window.stepBack = () => { if (currentStep > 1) goToStep(currentStep - 1, true); };
+
+        // ── MODAL ──
+        window.openModal = () => {
+            editingId   = null;
+            selectedTag = null;
+            selectedWho = [];
+            document.getElementById('food-form').reset();
+            buildMealChips();
+            document.querySelectorAll('.who-card').forEach(c => {
+                c.classList.remove('selected');
+                c.style.borderColor = 'transparent';
+                c.style.background  = '#f9fafb';
+                c.style.boxShadow   = 'none';
+            });
+            const now = new Date();
+            document.getElementById('form-date').value = now.toLocaleDateString('en-CA');
+            document.getElementById('form-time').value = now.toTimeString().slice(0, 5);
+            goToStep(1);
+            _modalOpenedAt = Date.now();
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
+
+        window.openEditModal = (id) => {
+            const entry = foodData[id];
+            if (!entry) return;
+            editingId   = id;
+            selectedTag = entry.tag || null;
+            selectedWho = [...(entry.who || [])];
+
+            document.getElementById('form-food').value  = entry.food  || '';
+            document.getElementById('form-notes').value = entry.notes || '';
+            document.getElementById('form-date').value  = entry.date  || todayStr();
+            document.getElementById('form-time').value  = entry.time  || '';
+
+            buildMealChips();
+            if (selectedTag) selectTag(selectedTag);
+
+            document.querySelectorAll('.who-card').forEach(card => {
+                const w = card.dataset.who;
+                const isA = w === 'Adarsh';
+                if (selectedWho.includes(w)) {
+                    card.classList.add('selected');
+                    card.style.borderColor = isA ? '#c2410c' : '#7c3aed';
+                    card.style.background  = isA ? '#fff7ed' : '#f5f3ff';
+                    card.style.boxShadow   = `0 4px 16px ${isA ? 'rgba(194,65,12,.18)' : 'rgba(124,58,237,.18)'}`;
+                } else {
+                    card.classList.remove('selected');
+                    card.style.borderColor = 'transparent';
+                    card.style.background  = '#f9fafb';
+                    card.style.boxShadow   = 'none';
+                }
+            });
+
+            goToStep(1);
+            _modalOpenedAt = Date.now();
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
+
+        window.closeModal = () => {
+            editingId = null;
+            document.getElementById('add-form-modal').style.display = 'none';
+        };
+        window.handleModalBackdrop = (e) => {
+            if (Date.now() - _modalOpenedAt < 350) return;
+            if (e.target === document.getElementById('add-form-modal')) closeModal();
+        };
+
+        // ── FORM SUBMIT ──
+        document.getElementById('food-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id    = editingId || crypto.randomUUID();
+            const entry = {
+                id,
+                food:  document.getElementById('form-food').value.trim(),
+                notes: document.getElementById('form-notes').value.trim() || '',
+                date:  document.getElementById('form-date').value,
+                time:  document.getElementById('form-time').value,
+                tag:   selectedTag,
+                who:   [...selectedWho]
+            };
+            await pushEntry(id, entry);
+            closeModal();
+        };
+    </script>
+</body>
+</html>

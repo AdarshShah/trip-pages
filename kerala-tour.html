@@ -481,16 +481,6 @@
         <!-- ── MAIN CONTENT ── -->
         <main class="flex-1 px-5 py-8">
 
-            <!-- Warnings -->
-            <div id="setup-warning" class="hidden mb-5 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-[11px] font-medium leading-relaxed">
-                <i class="fa-solid fa-screwdriver-wrench mr-1.5"></i>
-                <strong>JSONBin Setup Required:</strong> Replace API keys to enable cloud sync. Running in offline mode.
-            </div>
-            <div id="auth-warning" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-[11px] font-medium leading-relaxed">
-                <i class="fa-solid fa-key mr-1.5"></i>
-                <strong>Auth Error:</strong> The API key is invalid or has insufficient permissions.
-            </div>
-
             <!-- Financial Overview -->
             <div class="mb-10 budget-card rounded-3xl p-5">
                 <div class="flex items-center justify-between mb-4">
@@ -557,12 +547,13 @@
     <button onclick="openModal()" class="fab"><i class="fa-solid fa-plus"></i></button>
 
     <script>
-        // ── CREDENTIALS ──
-        const JSONBIN_API_KEY = 'REDACTED_API_KEY';
-        const JSONBIN_BIN_ID  = '6a041bfec0954111d817454e';
+        // ── FIREBASE CONFIG ──
+        const FIREBASE_BASE = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const FIREBASE_URL  = FIREBASE_BASE + '/itinerary';
 
-        const isConfigured = JSONBIN_API_KEY !== 'YOUR_JSONBIN_API_KEY' && JSONBIN_BIN_ID !== 'YOUR_BIN_ID';
-        const JSONBIN_URL   = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+        // ── JSONBIN (migration only — safe to remove after first load) ──
+        const JSONBIN_API_KEY = 'REDACTED_API_KEY';
+        const JSONBIN_URL     = 'https://api.jsonbin.io/v3/b/6a041bfec0954111d817454e';
 
         const CAT = {
             'Transport':     { color:'#2d7a4d', light:'#f0f9f1', icon:'fa-bus',          label:'Transport' },
@@ -575,7 +566,6 @@
         let itineraryData = [];
         let chartInstance  = null;
         let isSyncing      = false;
-        let activeKeyHeader = 'X-Master-Key';
         let editingId      = null;
         let _modalOpenedAt = 0;
 
@@ -594,11 +584,10 @@
 
         // ── INIT ──
         window.onload = () => {
-            if (!isConfigured) document.getElementById('setup-warning').classList.remove('hidden');
             fetchData();
             startCountdown();
             setupForm();
-            if (isConfigured) setInterval(() => fetchData(false), 15000);
+            setInterval(() => fetchData(false), 15000);
         };
 
         // ── FETCH ──
@@ -607,36 +596,27 @@
             isSyncing = true;
             if (manual) updateStatus('Syncing…', 'bg-blue-400 animate-pulse');
             try {
-                if (!isConfigured) {
-                    const raw = localStorage.getItem('munnar_offline_data');
-                    itineraryData = raw ? JSON.parse(raw) : getDefaultData();
-                    if (!raw) saveDataLocal();
-                    updateStatus('Local Mode', 'bg-amber-500');
-                } else {
-                    let hdrs = { [activeKeyHeader]: JSONBIN_API_KEY };
-                    let res  = await fetch(JSONBIN_URL, { headers: hdrs });
-                    if (res.status === 401) {
-                        activeKeyHeader = activeKeyHeader === 'X-Master-Key' ? 'X-Access-Key' : 'X-Master-Key';
-                        hdrs = { [activeKeyHeader]: JSONBIN_API_KEY };
-                        res  = await fetch(JSONBIN_URL, { headers: hdrs });
-                        if (res.status === 401) {
-                            document.getElementById('auth-warning').classList.remove('hidden');
-                            throw new Error('Invalid API Key.');
-                        }
-                    }
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    document.getElementById('auth-warning').classList.add('hidden');
-                    const data = await res.json();
-                    if (data.record?.itinerary) {
-                        itineraryData = data.record.itinerary;
-                    } else {
-                        itineraryData = getDefaultData();
-                        await pushDataCloud();
-                    }
+                const res  = await fetch(`${FIREBASE_URL}.json`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data !== null) {
+                    itineraryData = Array.isArray(data) ? data : Object.values(data);
                     updateStatus('Cloud Synced', 'bg-emerald-500');
+                } else {
+                    const migrated = await migrateFromJSONBin();
+                    if (migrated) {
+                        itineraryData = migrated;
+                        updateStatus('Cloud Synced', 'bg-emerald-500');
+                    } else {
+                        const raw = localStorage.getItem('munnar_offline_data');
+                        itineraryData = raw ? JSON.parse(raw) : getDefaultData();
+                        updateStatus('Local Mode', 'bg-amber-500');
+                    }
                 }
             } catch (err) {
                 console.error('Fetch Error:', err);
+                const raw = localStorage.getItem('munnar_offline_data');
+                itineraryData = raw ? JSON.parse(raw) : getDefaultData();
                 updateStatus('Sync Failed', 'bg-red-500');
             } finally {
                 isSyncing = false;
@@ -647,7 +627,7 @@
 
         // ── SAVE ──
         window.saveData = async () => {
-            if (!isConfigured) { saveDataLocal(); renderUI(); return; }
+            saveDataLocal();
             await pushDataCloud();
             renderUI();
         };
@@ -657,21 +637,11 @@
         const pushDataCloud = async () => {
             updateStatus('Saving…', 'bg-blue-400 animate-pulse');
             try {
-                // Read current bin first to preserve other apps' data (e.g. bengaluru spots)
-                const getHdrs = { [activeKeyHeader]: JSONBIN_API_KEY };
-                const getRes  = await fetch(JSONBIN_URL, { headers: getHdrs });
-                let current = {};
-                if (getRes.ok) current = (await getRes.json()).record || {};
-
-                const merged = { ...current, itinerary: itineraryData };
-
-                let hdrs = { 'Content-Type': 'application/json', [activeKeyHeader]: JSONBIN_API_KEY };
-                let res  = await fetch(JSONBIN_URL, { method:'PUT', headers:hdrs, body:JSON.stringify(merged) });
-                if (res.status === 401) {
-                    activeKeyHeader = activeKeyHeader === 'X-Master-Key' ? 'X-Access-Key' : 'X-Master-Key';
-                    hdrs = { 'Content-Type': 'application/json', [activeKeyHeader]: JSONBIN_API_KEY };
-                    res  = await fetch(JSONBIN_URL, { method:'PUT', headers:hdrs, body:JSON.stringify(merged) });
-                }
+                const res = await fetch(`${FIREBASE_URL}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(itineraryData)
+                });
                 if (!res.ok) throw new Error('Push failed');
                 updateStatus('Cloud Synced', 'bg-emerald-500');
             } catch (err) {
@@ -679,6 +649,28 @@
                 updateStatus('Save Error', 'bg-red-500');
             }
         };
+
+        // ── ONE-TIME MIGRATION FROM JSONBIN ──
+        async function migrateFromJSONBin() {
+            if (localStorage.getItem('migrated_kerala')) return null;
+            updateStatus('Migrating…', 'bg-amber-400 animate-pulse');
+            try {
+                const res = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_API_KEY } });
+                if (!res.ok) return null;
+                const data = await res.json();
+                const items = data.record?.itinerary;
+                if (items?.length) {
+                    await fetch(`${FIREBASE_URL}.json`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(items)
+                    });
+                    localStorage.setItem('migrated_kerala', '1');
+                    return items;
+                }
+            } catch {}
+            return null;
+        }
 
         // ── DEFAULT DATA ──
         const getDefaultData = () => [
