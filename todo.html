@@ -768,6 +768,7 @@
 
                 clearTimeout(longPressTimer);
                 card.classList.remove('pressing');
+                outer.style.overflow = 'visible';
                 currentX = dx;
                 card.style.transform = `translateX(${dx}px)`;
 
@@ -800,7 +801,7 @@
                     if (Math.abs(currentX) > 20) navigator.vibrate && navigator.vibrate(5);
                     card.classList.add('snap-back');
                     card.style.transform = 'translateX(0)';
-                    card.addEventListener('transitionend', () => { card.classList.remove('snap-back'); card.style.background = ''; }, { once: true });
+                    card.addEventListener('transitionend', () => { card.classList.remove('snap-back'); card.style.background = ''; outer.style.overflow = 'hidden'; }, { once: true });
                 }
             };
 
