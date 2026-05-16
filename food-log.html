@@ -680,6 +680,80 @@
             entries.forEach(e => { (groups[e.date] ??= []).push(e); });
             const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
+            // Tag order for within-day grouping
+            const TAG_ORDER = ['Breakfast', 'Lunch', 'Snack', 'Dinner', 'Midnight'];
+
+            const buildCard = (entry, animIdx, container) => {
+                const tag = TAGS[entry.tag] || TAGS['Snack'];
+                const whoHtml = (entry.who || []).map(w => {
+                    const isA = w === 'Adarsh';
+                    return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                  style="background:${isA ? '#fff7ed' : '#f5f3ff'};color:${isA ? '#c2410c' : '#7c3aed'};border:1px solid ${isA ? '#fdba74' : '#c4b5fd'};">
+                                ${isA ? '👦' : '👧'} ${w}
+                            </span>`;
+                }).join('');
+
+                const card = document.createElement('div');
+                card.className = 'entry-card mb-3';
+                card.style.animationDelay = `${animIdx * 0.07}s`;
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-gray-800 text-sm leading-tight truncate">${entry.food}</p>
+                            ${entry.notes ? `<p class="text-[11px] text-gray-400 italic mt-0.5 truncate">${entry.notes}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-2.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            ${whoHtml}
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-400 flex-shrink-0">
+                            <i class="fa-regular fa-clock mr-1 text-[9px]"></i>${fmtTime(entry.time)}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-50">
+                        <button onclick="deleteEntry('${entry.id}', event)"
+                                class="text-gray-300 hover:text-red-500 p-1 -ml-1 rounded-lg hover:bg-red-50 transition-colors"
+                                title="Delete">
+                            <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        </button>
+                        <button onclick="openEditModal('${entry.id}')"
+                                class="text-gray-300 hover:text-orange-500 p-1 -mr-1 rounded-lg hover:bg-orange-50 transition-colors"
+                                title="Edit">
+                            <i class="fa-solid fa-pen text-[11px]"></i>
+                        </button>
+                    </div>`;
+
+                // Long-press to edit
+                let _pt, _sx, _sy, _held = false;
+                const _ps = (e) => {
+                    if (e.target.closest('button')) return;
+                    const p = e.touches ? e.touches[0] : e;
+                    _sx = p.clientX; _sy = p.clientY; _held = false;
+                    card.classList.add('pressing');
+                    _pt = setTimeout(() => { _held = true; card.classList.remove('pressing'); openEditModal(entry.id); }, 620);
+                };
+                const _pm = (e) => {
+                    const p = e.touches ? e.touches[0] : e;
+                    if (Math.abs(p.clientX-_sx) > 8 || Math.abs(p.clientY-_sy) > 8) { clearTimeout(_pt); card.classList.remove('pressing'); }
+                };
+                const _pe = (e) => {
+                    if (_held && e?.cancelable) e.preventDefault();
+                    _held = false; clearTimeout(_pt); card.classList.remove('pressing');
+                };
+                card.addEventListener('touchstart',  _ps, { passive: true });
+                card.addEventListener('touchmove',   _pm, { passive: true });
+                card.addEventListener('touchend',    _pe);
+                card.addEventListener('touchcancel', _pe);
+                card.addEventListener('mousedown',   _ps);
+                card.addEventListener('mousemove',   _pm);
+                card.addEventListener('mouseup',     _pe);
+                card.addEventListener('mouseleave',  _pe);
+                card.addEventListener('contextmenu', e => e.preventDefault());
+
+                container.appendChild(card);
+            };
+
             let animIdx = 0;
             dates.forEach(dateKey => {
                 // Day separator
@@ -689,80 +763,36 @@
                 sep.innerHTML = `<span class="day-badge">${fmtDateLabel(dateKey)}</span><div class="day-line"></div>`;
                 container.appendChild(sep);
 
-                groups[dateKey].forEach(entry => {
-                    const tag   = TAGS[entry.tag] || TAGS['Snack'];
-                    const whoHtml = (entry.who || []).map(w => {
-                        const isA = w === 'Adarsh';
-                        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                                      style="background:${isA ? '#fff7ed' : '#f5f3ff'};color:${isA ? '#c2410c' : '#7c3aed'};border:1px solid ${isA ? '#fdba74' : '#c4b5fd'};">
-                                    ${isA ? '👦' : '👧'} ${w}
-                                </span>`;
-                    }).join('');
+                // Group day's entries by meal tag, preserving tag order
+                const byTag = {};
+                groups[dateKey].forEach(e => {
+                    const k = TAG_ORDER.includes(e.tag) ? e.tag : 'Snack';
+                    (byTag[k] ??= []).push(e);
+                });
+                // Sort within each tag by time ascending
+                Object.values(byTag).forEach(arr => arr.sort((a, b) => (a.time || '').localeCompare(b.time || '')));
 
-                    const card = document.createElement('div');
-                    card.className = 'entry-card mb-3';
-                    card.style.animationDelay = `${animIdx * 0.07}s`;
-                    card.innerHTML = `
-                        <div class="flex items-start justify-between gap-2 mb-2">
-                            <div class="flex-1 min-w-0">
-                                <p class="font-bold text-gray-800 text-sm leading-tight truncate">${entry.food}</p>
-                                ${entry.notes ? `<p class="text-[11px] text-gray-400 italic mt-0.5 truncate">${entry.notes}</p>` : ''}
-                            </div>
-                            <span class="text-[9px] font-black px-2.5 py-1 rounded-full flex-shrink-0 border"
-                                  style="color:${tag.color};background:${tag.bg};border-color:${tag.border};">
-                                ${tag.emoji} ${tag.label}
-                            </span>
-                        </div>
-                        <div class="flex items-center justify-between mt-2.5">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                ${whoHtml}
-                            </div>
-                            <span class="text-[10px] font-bold text-gray-400 flex-shrink-0">
-                                <i class="fa-regular fa-clock mr-1 text-[9px]"></i>${fmtTime(entry.time)}
-                            </span>
-                        </div>
-                        <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-50">
-                            <button onclick="deleteEntry('${entry.id}', event)"
-                                    class="text-gray-300 hover:text-red-500 p-1 -ml-1 rounded-lg hover:bg-red-50 transition-colors"
-                                    title="Delete">
-                                <i class="fa-solid fa-trash-can text-[11px]"></i>
-                            </button>
-                            <button onclick="openEditModal('${entry.id}')"
-                                    class="text-gray-300 hover:text-orange-500 p-1 -mr-1 rounded-lg hover:bg-orange-50 transition-colors"
-                                    title="Edit">
-                                <i class="fa-solid fa-pen text-[11px]"></i>
-                            </button>
-                        </div>`;
+                const tagKeys = TAG_ORDER.filter(k => byTag[k]);
+                tagKeys.forEach(tagKey => {
+                    const t = TAGS[tagKey];
 
-                    // Long-press to edit
-                    let _pt, _sx, _sy, _held = false;
-                    const _ps = (e) => {
-                        if (e.target.closest('button')) return;
-                        const p = e.touches ? e.touches[0] : e;
-                        _sx = p.clientX; _sy = p.clientY; _held = false;
-                        card.classList.add('pressing');
-                        _pt = setTimeout(() => { _held = true; card.classList.remove('pressing'); openEditModal(entry.id); }, 620);
-                    };
-                    const _pm = (e) => {
-                        const p = e.touches ? e.touches[0] : e;
-                        if (Math.abs(p.clientX-_sx) > 8 || Math.abs(p.clientY-_sy) > 8) { clearTimeout(_pt); card.classList.remove('pressing'); }
-                    };
-                    const _pe = (e) => {
-                        if (_held && e?.cancelable) e.preventDefault();
-                        _held = false; clearTimeout(_pt); card.classList.remove('pressing');
-                    };
-                    card.addEventListener('touchstart',  _ps, { passive: true });
-                    card.addEventListener('touchmove',   _pm, { passive: true });
-                    card.addEventListener('touchend',    _pe);
-                    card.addEventListener('touchcancel', _pe);
-                    card.addEventListener('mousedown',   _ps);
-                    card.addEventListener('mousemove',   _pm);
-                    card.addEventListener('mouseup',     _pe);
-                    card.addEventListener('mouseleave',  _pe);
-                    card.addEventListener('contextmenu', e => e.preventDefault());
+                    // Meal subsection header
+                    const mealHeader = document.createElement('div');
+                    mealHeader.className = 'flex items-center gap-2 mb-2 mt-1';
+                    mealHeader.style.cssText = 'opacity:0;animation:fadeIn .4s ease forwards;';
+                    mealHeader.style.animationDelay = `${animIdx * 0.06}s`;
+                    mealHeader.innerHTML = `
+                        <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black border"
+                              style="color:${t.color};background:${t.bg};border-color:${t.border};">
+                            ${t.emoji} ${t.label}
+                        </span>
+                        <div class="flex-1 h-px" style="background:linear-gradient(to right,${t.border}88,transparent);"></div>`;
+                    container.appendChild(mealHeader);
 
-                    container.appendChild(card);
-                    animIdx++;
+                    byTag[tagKey].forEach(entry => {
+                        buildCard(entry, animIdx, container);
+                        animIdx++;
+                    });
                 });
             });
         }
