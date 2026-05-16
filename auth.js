@@ -44,88 +44,140 @@
 
     // ── Styles ─────────────────────────────────────────────────────────────────
     const STYLES = `
+    @keyframes authDriftOrb {
+        0%   { transform: translate(0,0) scale(1); }
+        33%  { transform: translate(var(--dx1,40px),var(--dy1,-30px)) scale(1.08); }
+        66%  { transform: translate(var(--dx2,-20px),var(--dy2,20px)) scale(0.94); }
+        100% { transform: translate(var(--dx3,30px),var(--dy3,10px)) scale(1.04); }
+    }
+    @keyframes authFadeUp {
+        from { opacity: 0; transform: translateY(22px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
     #auth-overlay {
-        position: fixed; inset: 0; z-index: 9999;
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #0f172a 100%);
+        position: fixed; inset: 0; z-index: 9999; overflow: hidden;
+        background:
+            radial-gradient(ellipse 80% 60% at 20% 10%, rgba(16,32,24,0.9) 0%, transparent 70%),
+            radial-gradient(ellipse 60% 50% at 80% 80%, rgba(10,18,32,0.8) 0%, transparent 65%),
+            linear-gradient(160deg, #090c10 0%, #0c1118 40%, #0a0e0c 100%);
         display: flex; align-items: center; justify-content: center;
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    }
+    .auth-orb {
+        position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none;
+        animation: authDriftOrb var(--dur,18s) ease-in-out infinite alternate;
+        opacity: var(--op,0.18);
+    }
+    .auth-grain {
+        position: absolute; inset: 0; pointer-events: none; z-index: 0;
+        opacity: 0.032;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        background-size: 128px 128px;
     }
     #auth-card {
-        background: rgba(255,255,255,.07);
-        border: 1px solid rgba(255,255,255,.13);
-        border-radius: 20px;
-        padding: 48px 40px;
+        position: relative; z-index: 1;
+        background: rgba(255,255,255,0.045);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 28px;
+        padding: 48px 40px 44px;
         text-align: center;
-        max-width: 360px; width: 90%;
+        max-width: 380px; width: calc(100% - 48px);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
+        animation: authFadeUp 0.7s ease 0.1s both;
     }
-    #auth-icon { font-size: 48px; margin-bottom: 16px; }
+    #auth-eyebrow {
+        font-size: 10px; font-weight: 600;
+        letter-spacing: 0.22em; text-transform: uppercase;
+        color: rgba(240,237,232,0.25);
+        margin-bottom: 10px;
+    }
     #auth-title {
-        color: #fff; font-size: 22px; font-weight: 700;
-        margin: 0 0 8px; letter-spacing: -.3px;
+        font-family: 'Cormorant Garamond', Georgia, serif;
+        font-size: 54px; font-weight: 600;
+        color: #f0ede8;
+        letter-spacing: -0.02em; line-height: 0.92;
+        margin: 0 0 16px;
     }
+    #auth-title em { font-style: italic; font-weight: 400; }
     #auth-subtitle {
-        color: rgba(255,255,255,.5); font-size: 14px;
-        margin: 0 0 32px; line-height: 1.5;
+        color: rgba(240,237,232,0.45);
+        font-size: 13px; font-weight: 400;
+        margin: 0 0 36px; line-height: 1.65;
+        letter-spacing: 0.01em;
     }
     #auth-google-btn {
         display: flex; align-items: center; justify-content: center; gap: 10px;
-        background: #fff; color: #1f2937;
-        border: none; border-radius: 12px;
-        padding: 13px 20px; font-size: 15px; font-weight: 600;
+        background: rgba(255,255,255,0.07);
+        color: #f0ede8;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 14px;
+        padding: 14px 22px; font-size: 14px; font-weight: 500;
         cursor: pointer; width: 100%;
-        box-shadow: 0 2px 10px rgba(0,0,0,.35);
-        transition: background .15s, box-shadow .15s, transform .1s;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        letter-spacing: 0.01em;
+        backdrop-filter: blur(10px);
+        transition: background 0.22s ease, border-color 0.22s ease,
+                    transform 0.22s cubic-bezier(.34,1.3,.64,1), box-shadow 0.22s ease;
     }
     #auth-google-btn:hover:not(:disabled) {
-        background: #f9fafb;
-        box-shadow: 0 4px 18px rgba(0,0,0,.45);
-        transform: translateY(-1px);
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(255,255,255,0.22);
+        transform: translateY(-3px);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.32);
     }
-    #auth-google-btn:active:not(:disabled) { transform: translateY(0); }
-    #auth-google-btn:disabled { opacity: .6; cursor: not-allowed; }
-    #auth-google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+    #auth-google-btn:active:not(:disabled) { transform: translateY(-1px) scale(0.98); }
+    #auth-google-btn:disabled { opacity: .4; cursor: not-allowed; }
+    #auth-google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
     #auth-error-msg {
-        color: #f87171; font-size: 13px;
-        margin-top: 18px; min-height: 18px; line-height: 1.4;
+        color: rgba(248,113,113,0.85); font-size: 12px; font-weight: 400;
+        margin-top: 16px; min-height: 16px; line-height: 1.5;
     }
     #auth-loading-txt {
-        color: rgba(255,255,255,.5); font-size: 13px;
+        color: rgba(240,237,232,0.3); font-size: 12px;
         margin-top: 14px; display: none;
+        letter-spacing: 0.04em; text-transform: uppercase;
     }
     #auth-user-badge {
         position: fixed; bottom: 14px; right: 14px; z-index: 8888;
-        background: rgba(0,0,0,.55);
-        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,0.045);
+        border: 1px solid rgba(255,255,255,0.08);
         border-radius: 999px;
-        padding: 5px 12px 5px 5px;
+        padding: 5px 14px 5px 5px;
         display: flex; align-items: center; gap: 8px;
-        font-family: 'Inter', system-ui, sans-serif;
-        font-size: 12px; color: rgba(255,255,255,.75);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        font-family: 'DM Sans', system-ui, sans-serif;
+        font-size: 12px; color: rgba(240,237,232,0.55);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
     #auth-user-badge img {
-        width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+        width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
     }
     #auth-user-badge .avatar-fallback {
-        width: 22px; height: 22px; border-radius: 50%;
-        background: rgba(255,255,255,.2);
+        width: 24px; height: 24px; border-radius: 50%;
+        background: rgba(255,255,255,0.1);
         display: flex; align-items: center; justify-content: center;
-        font-size: 11px;
+        font-size: 12px;
     }
     #auth-signout-btn {
         background: none; border: none; cursor: pointer;
-        color: rgba(255,255,255,.45); font-size: 11px;
+        color: rgba(240,237,232,0.28); font-size: 11px;
         padding: 0 0 0 2px; text-decoration: underline;
-        font-family: inherit;
+        font-family: inherit; letter-spacing: 0.01em;
+        transition: color 0.2s ease;
     }
-    #auth-signout-btn:hover { color: #f87171; }
+    #auth-signout-btn:hover { color: rgba(248,113,113,0.75); }
     `;
 
     // ── DOM helpers ────────────────────────────────────────────────────────────
     function injectStyles() {
+        if (!document.querySelector('link[data-auth-fonts]')) {
+            const f = document.createElement('link');
+            f.rel = 'stylesheet';
+            f.dataset.authFonts = '1';
+            f.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap';
+            document.head.appendChild(f);
+        }
         const s = document.createElement('style');
         s.textContent = STYLES;
         document.head.appendChild(s);
@@ -136,10 +188,13 @@
         const overlay = document.createElement('div');
         overlay.id = 'auth-overlay';
         overlay.innerHTML = `
+            <div class="auth-orb" style="width:520px;height:520px;top:-160px;left:-200px;background:radial-gradient(circle,#1a4731,transparent);--dur:22s;--op:0.2;--dx1:60px;--dy1:-40px;--dx2:-30px;--dy2:50px;--dx3:45px;--dy3:-20px;"></div>
+            <div class="auth-orb" style="width:420px;height:420px;bottom:-120px;right:-160px;background:radial-gradient(circle,#0a2540,transparent);--dur:26s;--op:0.16;--dx1:-50px;--dy1:30px;--dx2:40px;--dy2:-60px;--dx3:-25px;--dy3:45px;"></div>
+            <div class="auth-grain"></div>
             <div id="auth-card">
-                <div id="auth-icon">🔐</div>
-                <h1 id="auth-title">Admin Access Only</h1>
-                <p id="auth-subtitle">Sign in with an authorised Google account<br>to access this app.</p>
+                <p id="auth-eyebrow">Personal Hub</p>
+                <h1 id="auth-title">Welcome <em>Back</em></h1>
+                <p id="auth-subtitle">Sign in with your Google account<br>to continue.</p>
                 <button id="auth-google-btn" onclick="window._authSignIn()">
                     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                         <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -147,10 +202,10 @@
                         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                     </svg>
-                    Sign in with Google
+                    Continue with Google
                 </button>
                 <div id="auth-error-msg"></div>
-                <div id="auth-loading-txt">Verifying access…</div>
+                <div id="auth-loading-txt">Verifying…</div>
             </div>`;
         document.body.appendChild(overlay);
     }
@@ -209,9 +264,9 @@
         if (FIREBASE_API_KEY === 'YOUR_FIREBASE_WEB_API_KEY') {
             const card = document.getElementById('auth-card');
             if (card) card.innerHTML = `
-                <div id="auth-icon">⚙️</div>
-                <h1 id="auth-title" style="color:#fbbf24">Setup Required</h1>
-                <p id="auth-subtitle">Open <code style="color:#a5f3fc">auth.js</code> and paste your Firebase Web API Key into <code style="color:#a5f3fc">FIREBASE_API_KEY</code>.</p>`;
+                <p id="auth-eyebrow">Configuration</p>
+                <h1 id="auth-title">Setup <em>Required</em></h1>
+                <p id="auth-subtitle">Open <code style="color:rgba(240,237,232,0.7);font-family:monospace">auth.js</code> and paste your Firebase Web API Key into <code style="color:rgba(240,237,232,0.7);font-family:monospace">FIREBASE_API_KEY</code>.</p>`;
             return;
         }
 
