@@ -552,9 +552,6 @@
         const FIREBASE_BASE = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
         const FIREBASE_URL  = FIREBASE_BASE + '/itinerary';
 
-        // ── JSONBIN (migration only — safe to remove after first load) ──
-        const JSONBIN_API_KEY = 'REDACTED_API_KEY';
-        const JSONBIN_URL     = 'https://api.jsonbin.io/v3/b/6a041bfec0954111d817454e';
 
         const CAT = {
             'Transport':     { color:'#2d7a4d', light:'#f0f9f1', icon:'fa-bus',          label:'Transport' },
@@ -605,15 +602,9 @@
                     itineraryData = Array.isArray(data) ? data : Object.values(data);
                     updateStatus('Cloud Synced', 'bg-emerald-500');
                 } else {
-                    const migrated = await migrateFromJSONBin();
-                    if (migrated) {
-                        itineraryData = migrated;
-                        updateStatus('Cloud Synced', 'bg-emerald-500');
-                    } else {
-                        const raw = localStorage.getItem('munnar_offline_data');
-                        itineraryData = raw ? JSON.parse(raw) : getDefaultData();
-                        updateStatus('Local Mode', 'bg-amber-500');
-                    }
+                    const raw = localStorage.getItem('munnar_offline_data');
+                    itineraryData = raw ? JSON.parse(raw) : getDefaultData();
+                    updateStatus('Local Mode', 'bg-amber-500');
                 }
             } catch (err) {
                 console.error('Fetch Error:', err);
@@ -651,28 +642,6 @@
                 updateStatus('Save Error', 'bg-red-500');
             }
         };
-
-        // ── ONE-TIME MIGRATION FROM JSONBIN ──
-        async function migrateFromJSONBin() {
-            if (localStorage.getItem('migrated_kerala')) return null;
-            updateStatus('Migrating…', 'bg-amber-400 animate-pulse');
-            try {
-                const res = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_API_KEY } });
-                if (!res.ok) return null;
-                const data = await res.json();
-                const items = data.record?.itinerary;
-                if (items?.length) {
-                    await fetch(`${FIREBASE_URL}.json`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(items)
-                    });
-                    localStorage.setItem('migrated_kerala', '1');
-                    return items;
-                }
-            } catch {}
-            return null;
-        }
 
         // ── DEFAULT DATA ──
         const getDefaultData = () => [

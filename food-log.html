@@ -528,6 +528,7 @@
         let _modalOpenedAt = 0;
 
         // ── HELPERS ──
+        const escHtml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         const hideLoading = () => {
             const el = document.getElementById('loading-screen');
             if (!el) return;
@@ -701,8 +702,8 @@
                 card.innerHTML = `
                     <div class="flex items-start justify-between gap-2 mb-2">
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-gray-800 text-sm leading-tight truncate">${entry.food}</p>
-                            ${entry.notes ? `<p class="text-[11px] text-gray-400 italic mt-0.5 truncate">${entry.notes}</p>` : ''}
+                            <p class="font-bold text-gray-800 text-sm leading-tight truncate">${escHtml(entry.food)}</p>
+                            ${entry.notes ? `<p class="text-[11px] text-gray-400 italic mt-0.5 truncate">${escHtml(entry.notes)}</p>` : ''}
                         </div>
                     </div>
                     <div class="flex items-center justify-between mt-2.5">

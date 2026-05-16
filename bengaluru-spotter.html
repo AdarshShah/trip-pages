@@ -502,9 +502,6 @@
         const FIREBASE_BASE = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
         const FIREBASE_URL  = FIREBASE_BASE + '/spots';
 
-        // ── JSONBIN (migration only — safe to remove after first load) ──
-        const JSONBIN_API_KEY = 'REDACTED_API_KEY';
-        const JSONBIN_URL     = 'https://api.jsonbin.io/v3/b/6a04bde5c0954111d81b978b';
 
         // ── CATEGORIES ──
         const CATS = {
@@ -529,6 +526,7 @@
         const STEP_PCT      = [25, 50, 75, 100];
 
         // ── HELPERS ──
+        const escHtml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         const hideLoading = () => {
             const el = document.getElementById('loading-screen');
             if (!el) return;
@@ -561,15 +559,9 @@
                     spotsData = Array.isArray(data) ? data : Object.values(data);
                     updateStatus('Cloud Synced', 'bg-emerald-500');
                 } else {
-                    const migrated = await migrateFromJSONBin();
-                    if (migrated) {
-                        spotsData = migrated;
-                        updateStatus('Cloud Synced', 'bg-emerald-500');
-                    } else {
-                        const raw = localStorage.getItem('bengaluru_spots');
-                        spotsData = raw ? JSON.parse(raw) : [];
-                        updateStatus('Local Mode', 'bg-amber-500');
-                    }
+                    const raw = localStorage.getItem('bengaluru_spots');
+                    spotsData = raw ? JSON.parse(raw) : [];
+                    updateStatus('Local Mode', 'bg-amber-500');
                 }
             } catch (err) {
                 console.error('Fetch Error:', err);
@@ -605,28 +597,6 @@
                 updateStatus('Save Error', 'bg-red-500');
             }
         };
-
-        // ── ONE-TIME MIGRATION FROM JSONBIN ──
-        async function migrateFromJSONBin() {
-            if (localStorage.getItem('migrated_spots')) return null;
-            updateStatus('Migrating…', 'bg-amber-400 animate-pulse');
-            try {
-                const res = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_API_KEY } });
-                if (!res.ok) return null;
-                const data = await res.json();
-                const items = data.record?.spots;
-                if (items?.length) {
-                    await fetch(`${FIREBASE_URL}.json`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(items)
-                    });
-                    localStorage.setItem('migrated_spots', '1');
-                    return items;
-                }
-            } catch {}
-            return null;
-        }
 
         // ── RENDER UI ──
         function renderUI() {
@@ -685,17 +655,17 @@
                    class="flex items-center gap-1.5 text-[11px] font-semibold mt-1 hover:opacity-75 transition-opacity"
                    style="color:${cfg.color};" onclick="event.stopPropagation()">
                     <i class="fa-solid fa-location-dot text-[10px] flex-shrink-0"></i>
-                    <span class="truncate">${spot.location}</span>
+                    <span class="truncate">${escHtml(spot.location)}</span>
                     <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-50 flex-shrink-0 ml-auto"></i>
                 </a>` : '';
 
             const descHTML = spot.description
-                ? `<p class="text-[11px] text-gray-500 mt-1.5 leading-relaxed line-clamp-2">${spot.description}</p>` : '';
+                ? `<p class="text-[11px] text-gray-500 mt-1.5 leading-relaxed line-clamp-2">${escHtml(spot.description)}</p>` : '';
 
             const tipHTML = spot.tips?.length
                 ? `<div class="mt-2 flex items-start gap-1.5 text-[10px] text-amber-700 font-medium bg-amber-50 px-2.5 py-2 rounded-lg border border-amber-100">
                        <i class="fa-solid fa-lightbulb text-amber-400 text-[9px] mt-0.5 flex-shrink-0"></i>
-                       <span>${spot.tips[0]}</span>
+                       <span>${escHtml(spot.tips[0])}</span>
                    </div>` : '';
 
             const card = document.createElement('div');
@@ -707,7 +677,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-start gap-2 mb-0.5">
-                        <h3 class="font-bold text-gray-800 text-sm leading-tight">${spot.name}</h3>
+                        <h3 class="font-bold text-gray-800 text-sm leading-tight">${escHtml(spot.name)}</h3>
                     </div>
                     ${locHTML}${descHTML}${tipHTML}
                     <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
