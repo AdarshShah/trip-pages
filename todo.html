@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adarsh &amp; Himu's To Do</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: {
+                sans:   ['Inter', 'sans-serif'],
+                serif:  ['Playfair Display', 'serif'],
+                header: ['Montserrat', 'sans-serif'],
+            }}}
+        }
+    </script>
+    <style>
+        @keyframes float {
+            0%,100% { transform: translateY(0) rotate(0deg); }
+            33%      { transform: translateY(-12px) rotate(5deg); }
+            66%      { transform: translateY(-6px) rotate(-3deg); }
+        }
+        @keyframes slideInRight {
+            from { opacity:0; transform:translateX(20px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes slideInUp {
+            from { opacity:0; transform:translateY(18px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes ripple {
+            0%   { transform:scale(1);   opacity:.6; }
+            100% { transform:scale(2.8); opacity:0; }
+        }
+        @keyframes spinRing { to { transform:rotate(360deg); } }
+        @keyframes glowPulse {
+            0%,100% { box-shadow: 0 0 18px rgba(139,92,246,.35); }
+            50%      { box-shadow: 0 0 44px rgba(109,40,217,.75); }
+        }
+        @keyframes bounceDot {
+            0%,80%,100% { transform:translateY(0); }
+            40%          { transform:translateY(-7px); }
+        }
+        @keyframes stepIn {
+            from { opacity:0; transform:translateX(20px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes stepInBack {
+            from { opacity:0; transform:translateX(-20px); }
+            to   { opacity:1; transform:translateX(0); }
+        }
+        @keyframes holdPulse {
+            0%   { box-shadow: 0 2px 12px rgba(109,40,217,.07); }
+            100% { box-shadow: 0 0 0 3px rgba(109,40,217,.22), 0 2px 14px rgba(109,40,217,.1); }
+        }
+
+        body {
+            background: linear-gradient(160deg, #f5f3ff 0%, #ede9fe 40%, #faf5ff 100%);
+            background-attachment: fixed;
+        }
+
+        /* LOADING */
+        .loading-overlay {
+            position:fixed; inset:0; z-index:1000;
+            background: linear-gradient(145deg, #4c1d95 0%, #6d28d9 55%, #7c3aed 100%);
+            display:flex; align-items:center; justify-content:center;
+            transition: opacity .5s ease;
+        }
+        .loader-ring {
+            width:56px; height:56px;
+            border:3px solid rgba(255,255,255,.2); border-top-color:#fff;
+            border-radius:50%; animation: spinRing .75s linear infinite;
+        }
+        .bounce-dot { animation: bounceDot 1.2s ease-in-out infinite; }
+
+        /* GLASS */
+        .glass-card {
+            background: rgba(255,255,255,.96);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(109,40,217,.11);
+            box-shadow: 0 4px 28px rgba(109,40,217,.08);
+        }
+
+        /* HERO */
+        .hero-bg {
+            background: linear-gradient(160deg, #4c1d95 0%, #6d28d9 45%, #7c3aed 75%, #8b5cf6 100%);
+        }
+        .hero-glow {
+            position:absolute; top:20px; right:26px; width:54px; height:54px;
+            background: radial-gradient(circle, rgba(196,181,253,.95) 0%, rgba(139,92,246,.5) 45%, transparent 72%);
+            border-radius:50%; animation: glowPulse 3s ease-in-out infinite;
+        }
+        .floating-emoji {
+            position:absolute; opacity:.22;
+            animation: float var(--dur,5s) ease-in-out infinite;
+            animation-delay: var(--del,0s);
+            user-select:none; pointer-events:none;
+        }
+
+        /* MODAL */
+        #add-form-modal { display:none; background: rgba(0,0,0,.55); backdrop-filter: blur(5px); }
+        .modal-sheet { animation: slideInUp .28s cubic-bezier(.34,1.5,.64,1) forwards; }
+
+        /* STEP FORM */
+        .step-panel { display:none; }
+        .step-panel.active { display:block; animation: stepIn .22s ease forwards; }
+        .step-panel.active.from-back { animation: stepInBack .22s ease forwards; }
+        .step-dot { transition: width .25s ease, background .25s ease; border-radius:9999px; height:6px; }
+
+        /* CATEGORY CHIPS */
+        .cat-chip {
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            padding: 9px 4px; border-radius: 14px; cursor:pointer;
+            border: 2px solid transparent;
+            transition: all .18s ease; user-select:none;
+            font-size:9px; font-weight:700; gap:3px; text-align:center;
+        }
+        .cat-chip:active { transform: scale(.94); }
+        .cat-chip.selected { transform: scale(1.04); }
+        .cat-chip .chip-emoji { font-size:17px; line-height:1; }
+
+        /* OWNER CARDS */
+        .owner-card {
+            flex:1; padding:16px 12px; border-radius:18px; cursor:pointer;
+            border: 2px solid transparent; background: #f9fafb;
+            display:flex; flex-direction:column; align-items:center; gap:8px;
+            transition: all .2s ease; user-select:none;
+        }
+        .owner-card:active { transform: scale(.95); }
+        .owner-card.selected { transform: scale(1.04); }
+        .owner-card .owner-name { font-size:13px; font-weight:800; letter-spacing:.02em; }
+
+        /* TODO SWIPE */
+        .todo-outer {
+            position: relative; border-radius: 18px; margin-bottom: 12px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, margin-bottom 0.3s ease, opacity 0.2s ease;
+            max-height: 500px;
+        }
+        .todo-outer.collapsing { max-height: 0 !important; margin-bottom: 0 !important; opacity: 0 !important; }
+        .todo-reveal {
+            position: absolute; inset: 0; display: flex;
+            border-radius: 18px; overflow: hidden;
+        }
+        .reveal-done {
+            flex:1; background: linear-gradient(135deg, #15803d, #22c55e);
+            display:flex; align-items:center; padding:0 18px;
+            color:#fff; font-size:11px; font-weight:800; letter-spacing:.05em; gap:6px;
+        }
+        .reveal-delete {
+            flex:1; background: linear-gradient(135deg, #ef4444, #dc2626);
+            display:flex; align-items:center; justify-content:flex-end; padding:0 18px;
+            color:#fff; font-size:11px; font-weight:800; letter-spacing:.05em; gap:6px;
+        }
+        .todo-card {
+            position: relative; z-index: 2;
+            background: #fff; border-radius: 18px;
+            border: 1px solid rgba(109,40,217,.1);
+            box-shadow: 0 2px 12px rgba(109,40,217,.07);
+            padding: 14px; will-change: transform;
+            touch-action: pan-y; cursor: pointer;
+            user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+        }
+        .todo-card.pressing { animation: holdPulse .6s ease forwards; border-color: rgba(109,40,217,.28) !important; }
+        .todo-card.snap-back { transition: transform 0.35s cubic-bezier(.34,1.56,.64,1); }
+        .todo-card.fly-off   { transition: transform 0.28s ease-in; }
+        .todo-card.overdue-card { border-color: rgba(239,68,68,.2) !important; }
+
+        /* DAY SEPARATOR */
+        .day-sep {
+            display:flex; align-items:center; gap:10px;
+            padding: 4px 0 12px 0; opacity:0; animation: fadeIn .45s ease forwards;
+        }
+        .day-badge {
+            color:#fff; font-size:9px; font-weight:800;
+            letter-spacing:.14em; text-transform:uppercase;
+            padding:4px 12px; border-radius:100px; white-space:nowrap; flex-shrink:0;
+        }
+        .day-line { flex:1; height:1px; }
+
+        /* FAB */
+        .fab {
+            position:fixed; bottom:24px; right:24px; width:58px; height:58px;
+            background: linear-gradient(135deg, #6d28d9, #7c3aed);
+            border-radius:50%; border:none; color:#fff; font-size:20px;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; z-index:80; box-shadow: 0 8px 26px rgba(109,40,217,.48);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .fab::before {
+            content:''; position:absolute; inset:0; border-radius:50%;
+            background:inherit; animation: ripple 2.4s ease-out infinite;
+        }
+        .fab:hover { transform:scale(1.1); box-shadow:0 12px 36px rgba(109,40,217,.55); }
+        .fab:active { transform:scale(.93); }
+
+        /* TOAST */
+        .toast {
+            position:fixed; bottom:28px; left:50%;
+            transform:translateX(-50%) translateY(20px);
+            background: rgba(15,10,30,.92); color:#fff;
+            padding:11px 22px; border-radius:100px;
+            font-size:12px; font-weight:600; letter-spacing:.01em;
+            z-index:999; white-space:nowrap;
+            border:1px solid rgba(139,92,246,.3);
+            opacity:0; pointer-events:none;
+            transition: opacity .25s ease, transform .25s ease;
+            backdrop-filter: blur(12px);
+        }
+        .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+        /* INPUT */
+        .input-focus { transition: border-color .2s, box-shadow .2s; }
+        .input-focus:focus { border-color:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,.12); outline:none; }
+
+        .text-shadow { text-shadow: 0 2px 18px rgba(0,0,0,.4); }
+        .desc-clamp { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    </style>
+</head>
+<body class="font-sans text-gray-800 flex flex-col items-center p-0 sm:p-4 min-h-screen">
+
+    <!-- LOADING -->
+    <div id="loading-screen" class="loading-overlay">
+        <div class="text-center">
+            <div class="text-4xl mb-5">✅</div>
+            <div class="loader-ring mx-auto mb-5"></div>
+            <p class="text-[11px] font-bold text-white/70 uppercase tracking-[.22em] mb-3">Loading your to-dos…</p>
+            <div class="flex justify-center space-x-1.5">
+                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:0s"></span>
+                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:.18s"></span>
+                <span class="w-1.5 h-1.5 bg-white/40 rounded-full bounce-dot" style="animation-delay:.36s"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD / EDIT MODAL -->
+    <div id="add-form-modal" class="fixed inset-0 z-[100] items-center justify-center p-4" onclick="handleModalBackdrop(event)">
+        <div class="modal-sheet glass-card w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" id="modal-inner">
+
+            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(135deg,#f5f3ff,#fff);">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.18em] mb-0.5" id="step-label">Step 1 of 4</p>
+                        <h2 class="text-lg font-serif" style="color:#4c1d95" id="step-title">What's the task?</h2>
+                    </div>
+                    <button onclick="closeModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shadow-sm">
+                        <i class="fa-solid fa-times text-sm"></i>
+                    </button>
+                </div>
+                <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                    <div id="step-progress" class="h-full rounded-full transition-all duration-300" style="background:linear-gradient(90deg,#6d28d9,#8b5cf6);width:25%;"></div>
+                </div>
+                <div class="flex justify-center gap-2">
+                    <div class="step-dot" data-step="1" style="width:20px;background:#6d28d9;"></div>
+                    <div class="step-dot" data-step="2" style="width:6px;background:#e5e7eb;"></div>
+                    <div class="step-dot" data-step="3" style="width:6px;background:#e5e7eb;"></div>
+                    <div class="step-dot" data-step="4" style="width:6px;background:#e5e7eb;"></div>
+                </div>
+            </div>
+
+            <form id="todo-form" class="px-6 pb-6">
+
+                <!-- Step 1: Title + Description -->
+                <div class="step-panel active" data-step="1">
+                    <div class="space-y-4 py-5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Title <span class="text-red-400 normal-case font-normal">*required</span></label>
+                            <input type="text" id="form-title" placeholder="e.g., Buy groceries"
+                                   class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description <span class="normal-case font-normal text-gray-300">(optional)</span></label>
+                            <textarea id="form-desc" placeholder="Add details…" rows="3"
+                                      class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus resize-none"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Deadline -->
+                <div class="step-panel" data-step="2">
+                    <div class="space-y-4 py-5">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Date</label>
+                                <input type="date" id="form-date" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Time</label>
+                                <input type="time" id="form-time" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-300 italic">Defaults to today at 11:59 PM.</p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Category -->
+                <div class="step-panel" data-step="3">
+                    <div class="py-5">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Category <span class="text-red-400 normal-case font-normal">*required</span></label>
+                        <div class="grid grid-cols-4 gap-2" id="cat-grid"></div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Owners -->
+                <div class="step-panel" data-step="4">
+                    <div class="py-5">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Who's responsible? <span class="text-red-400 normal-case font-normal">*at least one</span></label>
+                        <div class="flex gap-3" id="owner-grid">
+                            <div class="owner-card" data-owner="Adarsh" onclick="toggleOwner('Adarsh')">
+                                <div class="text-[32px]">👦</div>
+                                <div class="owner-name" style="color:#6d28d9;">Adarsh</div>
+                            </div>
+                            <div class="owner-card" data-owner="Himu" onclick="toggleOwner('Himu')">
+                                <div class="text-[32px]">👧</div>
+                                <div class="owner-name" style="color:#be185d;">Himu</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nav buttons -->
+                <div class="flex gap-3 pt-2 border-t border-gray-100">
+                    <button type="button" id="btn-back" onclick="stepBack()"
+                            class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                            style="display:none;">
+                        <i class="fa-solid fa-arrow-left text-sm"></i>
+                    </button>
+                    <button type="button" id="btn-next" onclick="stepNext()"
+                            class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95 shadow-md"
+                            style="background:linear-gradient(135deg,#6d28d9,#7c3aed);">
+                        Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="w-full max-w-md bg-white relative overflow-hidden sm:rounded-3xl flex flex-col min-h-screen sm:min-h-0"
+         style="box-shadow:0 32px 90px rgba(0,0,0,.16);">
+
+        <!-- HERO -->
+        <header class="hero-bg relative w-full overflow-hidden" style="height:272px;">
+            <div class="hero-glow"></div>
+            <div class="absolute inset-0 pointer-events-none"
+                 style="background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.07) 1px,transparent 0);background-size:24px 24px;"></div>
+
+            <div class="floating-emoji" style="top:10%;left:6%;font-size:24px;--dur:5.2s;--del:0s">📝</div>
+            <div class="floating-emoji" style="top:25%;right:10%;font-size:18px;--dur:6.5s;--del:1.2s">✅</div>
+            <div class="floating-emoji" style="top:55%;left:16%;font-size:15px;--dur:4.9s;--del:2.4s">⏰</div>
+            <div class="floating-emoji" style="top:35%;right:4%;font-size:20px;--dur:7.0s;--del:.7s">🎯</div>
+            <div class="floating-emoji" style="top:65%;left:3%;font-size:13px;--dur:5.7s;--del:1.9s">📋</div>
+            <div class="floating-emoji" style="top:15%;left:40%;font-size:14px;--dur:6.1s;--del:3.1s">💜</div>
+
+            <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 400 72" preserveAspectRatio="none">
+                <path d="M0 72 L0 46 L50 28 L95 46 L140 16 L185 38 L230 8 L275 32 L320 18 L365 38 L400 26 L400 72 Z" fill="rgba(255,255,255,.05)"/>
+                <path d="M0 72 L0 56 L60 40 L115 56 L165 34 L215 50 L265 26 L310 46 L355 36 L400 46 L400 72 Z" fill="rgba(255,255,255,.08)"/>
+                <path d="M0 72 L0 64 L100 54 L200 62 L300 54 L400 60 L400 72 Z" fill="rgba(255,255,255,.05)"/>
+            </svg>
+
+            <div class="absolute bottom-0 left-0 w-full px-8 pb-9 z-10">
+                <div class="mb-3" style="animation:slideInUp .6s ease-out .1s both">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black tracking-[.15em] uppercase shadow-lg"
+                          style="background:linear-gradient(135deg,#c4b5fd,#a78bfa);color:#2e1065;">
+                        ✦ Task Tracker ✦
+                    </span>
+                </div>
+                <h1 class="text-[34px] font-serif text-white leading-tight mb-2 text-shadow"
+                    style="animation:slideInUp .6s ease-out .22s both;">
+                    Adarsh &amp; Himu's<br><em>To Do</em>
+                </h1>
+                <p class="text-white/80 font-medium tracking-wide flex items-center text-sm"
+                   style="animation:slideInUp .6s ease-out .34s both;">
+                    Adarsh
+                    <span class="mx-2 inline-flex items-center justify-center w-5 h-5 rounded-full"
+                          style="background:rgba(196,181,253,.25);">
+                        <i class="fa-solid fa-check text-violet-300" style="font-size:8px;"></i>
+                    </span>
+                    Himu
+                </p>
+            </div>
+        </header>
+
+        <!-- SUMMARY CARD -->
+        <div class="px-5 -mt-10 relative z-20">
+            <div class="glass-card rounded-2xl p-5">
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Overdue</p>
+                        <p id="stat-overdue" class="text-2xl font-header font-black" style="color:#dc2626;">0</p>
+                        <p class="text-[9px] text-gray-400 font-medium">tasks</p>
+                    </div>
+                    <div class="text-center border-x border-gray-100">
+                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Today</p>
+                        <p id="stat-today" class="text-2xl font-header font-black" style="color:#d97706;">0</p>
+                        <p class="text-[9px] text-gray-400 font-medium">due</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Upcoming</p>
+                        <p id="stat-upcoming" class="text-2xl font-header font-black" style="color:#6d28d9;">0</p>
+                        <p class="text-[9px] text-gray-400 font-medium">tasks</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-3 border-t border-gray-100/80">
+                    <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400 mr-2 animate-pulse"></span>
+                    <span id="sync-text">Connecting…</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN -->
+        <main class="flex-1 px-5 py-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-sm font-black text-gray-700 uppercase tracking-widest">Pending Tasks</h2>
+                    <p id="task-count" class="text-[10px] text-gray-400 mt-0.5">0 tasks</p>
+                </div>
+                <button onclick="openModal()"
+                        class="flex items-center text-xs font-bold px-3.5 py-2 rounded-xl transition-all active:scale-95"
+                        style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);color:#4c1d95;border:1px solid rgba(109,40,217,.2);">
+                    <i class="fa-solid fa-plus mr-1.5" style="color:#7c3aed;"></i>Add Task
+                </button>
+            </div>
+
+            <div id="swipe-hint" class="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-[10px] text-gray-400 font-medium"
+                 style="background:rgba(109,40,217,.04);border:1px solid rgba(109,40,217,.08);">
+                <i class="fa-solid fa-left-right" style="color:#8b5cf6;font-size:11px;"></i>
+                Swipe right to complete &nbsp;·&nbsp; Swipe left to delete
+            </div>
+
+            <div id="todo-container"></div>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="px-6 py-7 text-center border-t"
+                style="border-color:rgba(109,40,217,.08);background:linear-gradient(180deg,#faf5ff,#f5f3ff);">
+            <div class="flex items-center justify-center gap-2 mb-2">
+                <div class="h-px w-8" style="background:linear-gradient(to right,transparent,rgba(109,40,217,.3));"></div>
+                <span style="font-size:10px;opacity:.4;">✅</span>
+                <div class="h-px w-8" style="background:linear-gradient(to left,transparent,rgba(109,40,217,.3));"></div>
+            </div>
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.25em] mb-1">To Do • v1.0</p>
+            <p class="text-xs text-gray-500 font-medium italic mb-4">One task at a time — Adarsh &amp; Himu 🎯</p>
+            <button onclick="fetchData(true)"
+                    class="inline-flex items-center px-5 py-2.5 bg-white rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-violet-50 transition-all active:scale-95 shadow-sm"
+                    style="border:1px solid rgba(109,40,217,.22);color:#4c1d95;">
+                <i class="fa-solid fa-rotate mr-1.5"></i>Sync Now
+            </button>
+        </footer>
+    </div>
+
+    <button onclick="openModal()" class="fab"><i class="fa-solid fa-plus"></i></button>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ── CONFIG ──
+        const FIREBASE_BASE = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const FIREBASE_URL  = FIREBASE_BASE.replace(/\/$/, '') + '/todos';
+        const isConfigured  = !FIREBASE_BASE.includes('YOUR_PROJECT_ID');
+        const LOCAL_KEY     = 'todo_offline_data';
+
+        const CATEGORIES = {
+            shopping:  { emoji: '🛒', label: 'Shopping',  color: '#0369a1', bg: '#e0f2fe', border: '#7dd3fc' },
+            household: { emoji: '🏠', label: 'Household', color: '#15803d', bg: '#dcfce7', border: '#86efac' },
+            outdoor:   { emoji: '🌳', label: 'Outdoor',   color: '#166534', bg: '#f0fdf4', border: '#6ee7b7' },
+            family:    { emoji: '👨‍👩‍👧', label: 'Family',   color: '#be185d', bg: '#fdf2f8', border: '#f9a8d4' },
+            friends:   { emoji: '👫', label: 'Friends',   color: '#d97706', bg: '#fef3c7', border: '#fcd34d' },
+            study:     { emoji: '📚', label: 'Study',     color: '#1d4ed8', bg: '#dbeafe', border: '#93c5fd' },
+            work:      { emoji: '💼', label: 'Work',      color: '#374151', bg: '#f3f4f6', border: '#d1d5db' },
+            health:    { emoji: '❤️', label: 'Health',    color: '#dc2626', bg: '#fef2f2', border: '#fca5a5' },
+        };
+
+        // ── STATE ──
+        let todoData       = {};
+        let isSyncing      = false;
+        let editingId      = null;
+        let selectedCat    = null;
+        let selectedOwners = [];
+        let _modalOpenedAt = 0;
+
+        // ── HELPERS ──
+        const hideLoading = () => {
+            const el = document.getElementById('loading-screen');
+            if (!el) return;
+            el.style.opacity = '0';
+            setTimeout(() => el.style.display = 'none', 500);
+        };
+        const updateStatus = (text, dotCls) => {
+            document.getElementById('sync-text').textContent = text;
+            document.getElementById('sync-dot').className = `w-2 h-2 rounded-full mr-2 ${dotCls}`;
+        };
+        let _toastTimer;
+        const showToast = (msg) => {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+        };
+        const fmtTime = (t) => {
+            if (!t) return '';
+            const [h, m] = t.split(':').map(Number);
+            return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+        };
+        const todayStr    = () => new Date().toLocaleDateString('en-CA');
+        const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toLocaleDateString('en-CA'); };
+        const escHtml     = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+        // ── INIT ──
+        window.onload = () => {
+            buildCatChips();
+            fetchData();
+            if (isConfigured) setInterval(() => fetchData(false), 15000);
+        };
+
+        // ── FETCH ──
+        window.fetchData = async (manual = false) => {
+            if (isSyncing) return;
+            isSyncing = true;
+            if (manual) updateStatus('Syncing…', 'bg-blue-400 animate-pulse');
+            try {
+                if (!isConfigured) {
+                    const raw = localStorage.getItem(LOCAL_KEY);
+                    todoData = raw ? JSON.parse(raw) : {};
+                    updateStatus('Offline Mode', 'bg-amber-500');
+                } else {
+                    const res = await fetch(`${FIREBASE_URL}.json`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    todoData = (await res.json()) || {};
+                    updateStatus('Cloud Synced', 'bg-emerald-500');
+                }
+            } catch (err) {
+                console.error(err);
+                todoData = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}');
+                updateStatus('Sync Failed', 'bg-red-500');
+            } finally {
+                isSyncing = false;
+                renderTodos();
+                hideLoading();
+            }
+        };
+
+        const saveLocal = () => localStorage.setItem(LOCAL_KEY, JSON.stringify(todoData));
+
+        const pushEntry = async (id, entry) => {
+            if (!isConfigured) { todoData[id] = entry; saveLocal(); renderTodos(); return; }
+            updateStatus('Saving…', 'bg-blue-400 animate-pulse');
+            try {
+                const res = await fetch(`${FIREBASE_URL}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [id]: entry })
+                });
+                if (!res.ok) throw new Error('Save failed');
+                todoData[id] = entry; saveLocal();
+                updateStatus('Cloud Synced', 'bg-emerald-500');
+                showToast('✓ Task saved');
+            } catch (err) {
+                console.error(err);
+                todoData[id] = entry; saveLocal();
+                updateStatus('Save Error', 'bg-red-500');
+                showToast('⚠ Saved locally');
+            }
+            renderTodos();
+        };
+
+        const markComplete = async (id) => {
+            if (!todoData[id]) return;
+            const completedAt = new Date().toISOString();
+            todoData[id].completed  = true;
+            todoData[id].completedAt = completedAt;
+            saveLocal();
+            if (isConfigured) {
+                try {
+                    await fetch(`${FIREBASE_URL}/${id}.json`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ completed: true, completedAt })
+                    });
+                    updateStatus('Cloud Synced', 'bg-emerald-500');
+                } catch (e) { console.error(e); }
+            }
+            showToast('✓ Task complete!');
+        };
+
+        const deleteTodo = async (id) => {
+            delete todoData[id]; saveLocal();
+            if (isConfigured) {
+                try {
+                    await fetch(`${FIREBASE_URL}/${id}.json`, { method: 'DELETE' });
+                    updateStatus('Cloud Synced', 'bg-emerald-500');
+                } catch (e) { console.error(e); }
+            }
+            showToast('Task deleted');
+        };
+
+        // ── ANIMATE CARD OUT ──
+        function animateOut(outer, card, direction, onComplete) {
+            outer.style.overflow = 'visible';
+            card.classList.add('fly-off');
+            card.style.transform = `translateX(${direction > 0 ? '120vw' : '-120vw'})`;
+            setTimeout(() => {
+                outer.classList.add('collapsing');
+                setTimeout(() => { outer.remove(); onComplete && onComplete(); }, 320);
+            }, 260);
+        }
+
+        // ── RENDER ──
+        function renderTodos() {
+            const container = document.getElementById('todo-container');
+            container.innerHTML = '';
+            const today    = todayStr();
+            const tomorrow = tomorrowStr();
+
+            const pending = Object.values(todoData)
+                .filter(t => t && t.title && !t.completed)
+                .sort((a, b) => {
+                    const da = `${a.deadline || '9999-12-31'}T${a.deadlineTime || '23:59'}`;
+                    const db = `${b.deadline || '9999-12-31'}T${b.deadlineTime || '23:59'}`;
+                    return da.localeCompare(db);
+                });
+
+            document.getElementById('stat-overdue').textContent  = pending.filter(t => t.deadline && t.deadline < today).length;
+            document.getElementById('stat-today').textContent    = pending.filter(t => t.deadline === today).length;
+            document.getElementById('stat-upcoming').textContent = pending.filter(t => t.deadline > today).length;
+            document.getElementById('task-count').textContent    = `${pending.length} task${pending.length !== 1 ? 's' : ''}`;
+            document.getElementById('swipe-hint').style.display  = pending.length ? '' : 'none';
+
+            if (pending.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16" style="animation:fadeIn .5s ease both;">
+                        <div class="text-5xl mb-4">🎉</div>
+                        <p class="text-sm font-bold text-gray-400">All caught up!</p>
+                        <p class="text-xs text-gray-300 mt-1">Tap + to add a new task.</p>
+                    </div>`;
+                return;
+            }
+
+            // Group by date key
+            const groups = {};
+            pending.forEach(t => {
+                const key = (t.deadline && t.deadline < today) ? '__overdue__' : (t.deadline || '__overdue__');
+                (groups[key] ??= []).push(t);
+            });
+
+            const keys = [
+                ...(groups['__overdue__'] ? ['__overdue__'] : []),
+                ...Object.keys(groups).filter(k => k !== '__overdue__').sort()
+            ];
+
+            const badgeInfo = (key) => {
+                if (key === '__overdue__') return { bg: 'linear-gradient(135deg,#dc2626,#ef4444)', line: 'linear-gradient(to right,rgba(220,38,38,.3),transparent)', shadow: 'rgba(220,38,38,.35)', label: '🔴 Overdue' };
+                if (key === today)        return { bg: 'linear-gradient(135deg,#d97706,#f59e0b)', line: 'linear-gradient(to right,rgba(217,119,6,.3),transparent)',   shadow: 'rgba(217,119,6,.35)',   label: '📅 Today' };
+                if (key === tomorrow)     return { bg: 'linear-gradient(135deg,#2563eb,#3b82f6)', line: 'linear-gradient(to right,rgba(37,99,235,.3),transparent)',   shadow: 'rgba(37,99,235,.35)',   label: '📅 Tomorrow' };
+                const d = new Date(key + 'T12:00:00');
+                return { bg: 'linear-gradient(135deg,#6d28d9,#8b5cf6)', line: 'linear-gradient(to right,rgba(109,40,217,.3),transparent)', shadow: 'rgba(109,40,217,.35)',
+                         label: d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }).toUpperCase() };
+            };
+
+            let animIdx = 0;
+            keys.forEach(dateKey => {
+                const bi = badgeInfo(dateKey);
+                const sep = document.createElement('div');
+                sep.className = 'day-sep';
+                sep.style.animationDelay = `${animIdx * 0.06}s`;
+                sep.innerHTML = `<span class="day-badge" style="background:${bi.bg};box-shadow:0 2px 8px ${bi.shadow};">${bi.label}</span><div class="day-line" style="background:${bi.line};"></div>`;
+                container.appendChild(sep);
+
+                groups[dateKey].forEach(todo => {
+                    const cat       = CATEGORIES[todo.category] || CATEGORIES.work;
+                    const isOverdue = dateKey === '__overdue__';
+                    const timeLabel = todo.deadlineTime ? `by ${fmtTime(todo.deadlineTime)}` : '';
+
+                    const ownerHtml = (todo.owners || []).map(o => {
+                        const isA = o === 'Adarsh';
+                        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                     style="background:${isA ? '#f5f3ff' : '#fdf2f8'};color:${isA ? '#6d28d9' : '#be185d'};border:1px solid ${isA ? '#c4b5fd' : '#f9a8d4'};">
+                                    ${isA ? '👦' : '👧'} ${o}
+                                </span>`;
+                    }).join('');
+
+                    const outer = document.createElement('div');
+                    outer.className = 'todo-outer';
+                    outer.innerHTML = `
+                        <div class="todo-reveal">
+                            <div class="reveal-done"><i class="fa-solid fa-check"></i> Done</div>
+                            <div class="reveal-delete">Delete <i class="fa-solid fa-trash"></i></div>
+                        </div>
+                        <div class="todo-card${isOverdue ? ' overdue-card' : ''}">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-gray-800 text-sm leading-tight">${escHtml(todo.title)}</p>
+                                    ${todo.description ? `<p class="text-[11px] text-gray-400 mt-0.5 leading-snug desc-clamp">${escHtml(todo.description)}</p>` : ''}
+                                </div>
+                                <span class="text-[9px] font-black px-2 py-1 rounded-full flex-shrink-0 border ml-1"
+                                      style="color:${cat.color};background:${cat.bg};border-color:${cat.border};">
+                                    ${cat.emoji} ${cat.label}
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <div class="flex items-center gap-1.5 flex-wrap">${ownerHtml}</div>
+                                ${timeLabel ? `<span class="text-[10px] font-bold flex-shrink-0" style="color:${isOverdue ? '#ef4444' : '#9ca3af'};">
+                                    <i class="fa-regular fa-clock mr-0.5 text-[9px]"></i>${timeLabel}
+                                </span>` : ''}
+                            </div>
+                        </div>`;
+
+                    const card = outer.querySelector('.todo-card');
+                    card.style.opacity = '0';
+                    card.style.animation = `slideInRight .4s ease ${animIdx * 0.07}s forwards`;
+
+                    attachSwipe(outer, card, todo.id);
+                    container.appendChild(outer);
+                    animIdx++;
+                });
+            });
+        }
+
+        // ── SWIPE ──
+        function attachSwipe(outer, card, id) {
+            let startX = 0, startY = 0, currentX = 0;
+            let isSwiping = false, axisLocked = false, isVertical = false, holdFired = false;
+            let longPressTimer = null;
+
+            const onStart = (e) => {
+                if (e.target.closest('button')) return;
+                const p = e.touches ? e.touches[0] : e;
+                startX = p.clientX; startY = p.clientY;
+                currentX = 0; isSwiping = true; axisLocked = false; isVertical = false; holdFired = false;
+                card.style.transition = '';
+                card.classList.add('pressing');
+                longPressTimer = setTimeout(() => {
+                    holdFired = true; isSwiping = false;
+                    card.classList.remove('pressing');
+                    openEditModal(id);
+                }, 620);
+            };
+
+            const onMove = (e) => {
+                if (!isSwiping) return;
+                const p    = e.touches ? e.touches[0] : e;
+                const dx   = p.clientX - startX;
+                const dy   = p.clientY - startY;
+
+                if (!axisLocked) {
+                    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 6) {
+                        isVertical = true; axisLocked = true;
+                        clearTimeout(longPressTimer);
+                        card.classList.remove('pressing');
+                        isSwiping = false;
+                        return;
+                    }
+                    if (Math.abs(dx) > 6) axisLocked = true;
+                }
+                if (isVertical || !axisLocked) return;
+
+                clearTimeout(longPressTimer);
+                card.classList.remove('pressing');
+                currentX = dx;
+                card.style.transform = `translateX(${Math.max(-140, Math.min(140, dx))}px)`;
+                if (e.cancelable) e.preventDefault();
+            };
+
+            const onEnd = () => {
+                clearTimeout(longPressTimer);
+                card.classList.remove('pressing');
+                if (!isSwiping || holdFired) { isSwiping = false; return; }
+                isSwiping = false;
+
+                if (currentX > 80) {
+                    animateOut(outer, card, 1, () => markComplete(id));
+                } else if (currentX < -80) {
+                    animateOut(outer, card, -1, () => deleteTodo(id));
+                } else {
+                    card.classList.add('snap-back');
+                    card.style.transform = 'translateX(0)';
+                    card.addEventListener('transitionend', () => card.classList.remove('snap-back'), { once: true });
+                }
+            };
+
+            card.addEventListener('touchstart',  onStart, { passive: true });
+            card.addEventListener('touchmove',   onMove,  { passive: false });
+            card.addEventListener('touchend',    onEnd);
+            card.addEventListener('touchcancel', onEnd);
+            card.addEventListener('mousedown',   onStart);
+            card.addEventListener('mousemove',   onMove);
+            card.addEventListener('mouseup',     onEnd);
+            card.addEventListener('mouseleave',  onEnd);
+            card.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        // ── CATEGORY CHIPS ──
+        function buildCatChips() {
+            const grid = document.getElementById('cat-grid');
+            grid.innerHTML = '';
+            Object.entries(CATEGORIES).forEach(([key, c]) => {
+                const chip = document.createElement('div');
+                chip.className = 'cat-chip';
+                chip.dataset.cat = key;
+                chip.style.background = c.bg;
+                chip.innerHTML = `<span class="chip-emoji">${c.emoji}</span><span style="color:${c.color};">${c.label}</span>`;
+                chip.onclick = () => selectCat(key);
+                grid.appendChild(chip);
+            });
+        }
+
+        function selectCat(key) {
+            selectedCat = key;
+            document.querySelectorAll('.cat-chip').forEach(chip => {
+                const k = chip.dataset.cat, c = CATEGORIES[k];
+                if (k === key) {
+                    chip.classList.add('selected');
+                    chip.style.borderColor = c.color;
+                    chip.style.boxShadow   = `0 0 0 2px ${c.color}33`;
+                } else {
+                    chip.classList.remove('selected');
+                    chip.style.borderColor = 'transparent';
+                    chip.style.boxShadow   = 'none';
+                }
+            });
+        }
+
+        // ── OWNERS ──
+        window.toggleOwner = (name) => {
+            const idx = selectedOwners.indexOf(name);
+            if (idx === -1) selectedOwners.push(name); else selectedOwners.splice(idx, 1);
+            document.querySelectorAll('.owner-card').forEach(card => {
+                const o = card.dataset.owner, isA = o === 'Adarsh';
+                if (selectedOwners.includes(o)) {
+                    card.classList.add('selected');
+                    card.style.borderColor = isA ? '#6d28d9' : '#be185d';
+                    card.style.background  = isA ? '#f5f3ff' : '#fdf2f8';
+                    card.style.boxShadow   = `0 4px 16px ${isA ? 'rgba(109,40,217,.18)' : 'rgba(190,24,93,.18)'}`;
+                } else {
+                    card.classList.remove('selected');
+                    card.style.borderColor = 'transparent';
+                    card.style.background  = '#f9fafb';
+                    card.style.boxShadow   = 'none';
+                }
+            });
+        };
+
+        // ── STEP NAV ──
+        let currentStep  = 1;
+        const TOTAL_STEPS = 4;
+        const STEP_TITLES = ["What's the task?", 'When is it due?', 'What kind?', "Who's responsible?"];
+        const STEP_PCT    = [25, 50, 75, 100];
+
+        function goToStep(step, fromBack = false) {
+            document.querySelector(`.step-panel[data-step="${currentStep}"]`).classList.remove('active');
+            const next = document.querySelector(`.step-panel[data-step="${step}"]`);
+            next.classList.toggle('from-back', fromBack);
+            next.classList.add('active');
+            currentStep = step;
+            document.getElementById('step-label').textContent    = `Step ${step} of ${TOTAL_STEPS}`;
+            document.getElementById('step-title').textContent    = STEP_TITLES[step - 1];
+            document.getElementById('step-progress').style.width = `${STEP_PCT[step - 1]}%`;
+            document.querySelectorAll('.step-dot').forEach(dot => {
+                const s = parseInt(dot.dataset.step);
+                dot.style.background = s <= step ? '#6d28d9' : '#e5e7eb';
+                dot.style.width      = s === step ? '20px' : '6px';
+            });
+            document.getElementById('btn-back').style.display = step > 1 ? '' : 'none';
+            document.getElementById('btn-next').innerHTML = step === TOTAL_STEPS
+                ? (editingId ? '<i class="fa-solid fa-check mr-1.5"></i>Save Changes' : '<i class="fa-solid fa-circle-check mr-1.5"></i>Add Task')
+                : 'Continue <i class="fa-solid fa-arrow-right ml-1.5"></i>';
+        }
+
+        const flashInvalid = (el) => {
+            el.style.borderColor = '#ef4444'; el.focus && el.focus();
+            setTimeout(() => el.style.borderColor = '', 1600);
+        };
+        const flashGroup = (el) => {
+            el.style.outline = '2px solid #ef4444'; el.style.borderRadius = '12px';
+            setTimeout(() => el.style.outline = '', 1600);
+        };
+
+        window.stepNext = () => {
+            if (currentStep === 1) {
+                if (!document.getElementById('form-title').value.trim()) {
+                    flashInvalid(document.getElementById('form-title')); return;
+                }
+            }
+            if (currentStep === 3 && !selectedCat) {
+                flashGroup(document.getElementById('cat-grid')); return;
+            }
+            if (currentStep < TOTAL_STEPS) {
+                goToStep(currentStep + 1);
+            } else {
+                if (selectedOwners.length === 0) {
+                    flashGroup(document.getElementById('owner-grid')); return;
+                }
+                document.getElementById('todo-form').dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        };
+        window.stepBack = () => { if (currentStep > 1) goToStep(currentStep - 1, true); };
+
+        // ── MODAL ──
+        const resetOwnerCards = () => {
+            document.querySelectorAll('.owner-card').forEach(c => {
+                c.classList.remove('selected');
+                c.style.borderColor = 'transparent'; c.style.background = '#f9fafb'; c.style.boxShadow = 'none';
+            });
+        };
+
+        window.openModal = () => {
+            editingId = null; selectedCat = null; selectedOwners = [];
+            document.getElementById('todo-form').reset();
+            buildCatChips(); resetOwnerCards();
+            document.getElementById('form-date').value = todayStr();
+            document.getElementById('form-time').value = '23:59';
+            goToStep(1);
+            _modalOpenedAt = Date.now();
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
+
+        window.openEditModal = (id) => {
+            const todo = todoData[id]; if (!todo) return;
+            editingId = id; selectedCat = todo.category || null; selectedOwners = [...(todo.owners || [])];
+            document.getElementById('form-title').value = todo.title        || '';
+            document.getElementById('form-desc').value  = todo.description  || '';
+            document.getElementById('form-date').value  = todo.deadline     || todayStr();
+            document.getElementById('form-time').value  = todo.deadlineTime || '23:59';
+            buildCatChips();
+            if (selectedCat) selectCat(selectedCat);
+            resetOwnerCards();
+            document.querySelectorAll('.owner-card').forEach(card => {
+                const o = card.dataset.owner, isA = o === 'Adarsh';
+                if (selectedOwners.includes(o)) {
+                    card.classList.add('selected');
+                    card.style.borderColor = isA ? '#6d28d9' : '#be185d';
+                    card.style.background  = isA ? '#f5f3ff' : '#fdf2f8';
+                    card.style.boxShadow   = `0 4px 16px ${isA ? 'rgba(109,40,217,.18)' : 'rgba(190,24,93,.18)'}`;
+                }
+            });
+            goToStep(1);
+            _modalOpenedAt = Date.now();
+            document.getElementById('add-form-modal').style.display = 'flex';
+        };
+
+        window.closeModal = () => {
+            editingId = null;
+            document.getElementById('add-form-modal').style.display = 'none';
+        };
+        window.handleModalBackdrop = (e) => {
+            if (Date.now() - _modalOpenedAt < 350) return;
+            if (e.target === document.getElementById('add-form-modal')) closeModal();
+        };
+
+        // ── SUBMIT ──
+        document.getElementById('todo-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id    = editingId || crypto.randomUUID();
+            const entry = {
+                id,
+                title:        document.getElementById('form-title').value.trim(),
+                description:  document.getElementById('form-desc').value.trim() || '',
+                deadline:     document.getElementById('form-date').value || todayStr(),
+                deadlineTime: document.getElementById('form-time').value || '23:59',
+                category:     selectedCat,
+                owners:       [...selectedOwners],
+                completed:    editingId ? (todoData[editingId]?.completed  || false) : false,
+                completedAt:  editingId ? (todoData[editingId]?.completedAt || null)  : null,
+                createdAt:    editingId ? (todoData[editingId]?.createdAt  || new Date().toISOString()) : new Date().toISOString(),
+            };
+            await pushEntry(id, entry);
+            closeModal();
+        };
+    </script>
+</body>
+</html>
