@@ -225,18 +225,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,.18);
         }
 
-        /* ── VISITED PILL ── */
-        .visited-pill {
-            display: inline-flex; align-items: center; gap: 3px;
-            font-size: 9px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: .08em;
-            padding: 3px 8px; border-radius: 100px;
-            cursor: pointer; transition: transform .15s ease, opacity .15s;
-            border: 1px solid transparent;
-        }
-        .visited-pill.yes { background:#dcfce7; color:#15803d; border-color:#bbf7d0; }
-        .visited-pill.no  { background:#fef9c3; color:#a16207; border-color:#fde68a; }
-        .visited-pill:hover { transform: scale(1.06); opacity:.85; }
 
         /* ── CATEGORY SECTION ── */
         .cat-section-header {
@@ -718,12 +706,6 @@
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-start gap-2 mb-0.5">
                         <h3 class="font-bold text-gray-800 text-sm leading-tight">${spot.name}</h3>
-                        <button class="visited-pill ${spot.visited ? 'yes' : 'no'} flex-shrink-0"
-                                onclick="toggleVisited('${spot.id}')" title="Toggle visited">
-                            ${spot.visited
-                                ? '<i class="fa-solid fa-check text-[8px]"></i> Visited'
-                                : '<i class="fa-solid fa-clock text-[8px]"></i> To Visit'}
-                        </button>
                     </div>
                     ${locHTML}${descHTML}${tipHTML}
                     <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-gray-50">
@@ -960,10 +942,6 @@
         window.deleteSpot = (id) => {
             spotsData = spotsData.filter(s => s.id !== id);
             saveData();
-        };
-        window.toggleVisited = (id) => {
-            const i = spotsData.findIndex(s => s.id === id);
-            if (i !== -1) { spotsData[i].visited = !spotsData[i].visited; saveData(); }
         };
     </script>
 </body>
