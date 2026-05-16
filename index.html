@@ -11,6 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="My Apps">
     <meta name="theme-color" content="#0c0f14">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="auth.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
@@ -391,74 +392,52 @@
     </div>
 
     <script>
-        // ─────────────────────────────────────────────────────────────
-        //  APP REGISTRY — add new apps here
-        // ─────────────────────────────────────────────────────────────
-        const APPS = [
-            {
-                title:    'Kerala Tour',
-                subtitle: 'Munnar · Alleppey',
-                icon:     'fa-map-location-dot',
-                gradient: 'linear-gradient(145deg, #1a5c38, #00695c)',
-                href:     'kerala-tour.html',
-                badge:    'Live',
-            },
-            {
-                title:    'Bengaluru Spotter',
-                subtitle: 'City spots & hidden gems',
-                icon:     'fa-location-dot',
-                gradient: 'linear-gradient(145deg, #1e3a5f, #1a6b8a)',
-                href:     'bengaluru-spotter.html',
-                badge:    'Live',
-            },
-            {
-                title:    'Food Log',
-                subtitle: 'Adarsh & Himu\'s diary',
-                icon:     'fa-utensils',
-                gradient: 'linear-gradient(145deg, #7c2d12, #ea580c)',
-                href:     'food-log.html',
-                badge:    'Live',
-            },
-            {
-                title:    'To Do',
-                subtitle: 'Adarsh & Himu\'s tasks',
-                icon:     'fa-circle-check',
-                gradient: 'linear-gradient(145deg, #4c1d95, #7c3aed)',
-                href:     'todo.html',
-                badge:    'Live',
-            },
-            {
-                title:    'Vacation Discoveries',
-                subtitle: 'Places from our travels',
-                icon:     'fa-earth-americas',
-                gradient: 'linear-gradient(145deg, #312e81, #0d9488)',
-                href:     'vacation-discoveries.html',
-                badge:    'Live',
-            },
-            // ── Add more apps below ──
-            {
-                title:    'Coming Soon',
-                subtitle: 'New app on the way',
-                icon:     'fa-plus',
-                gradient: null,          // null → muted placeholder style
-                href:     null,          // null → shows "coming soon" toast
-                badge:    'Soon',
-            },
-        ];
-        // ─────────────────────────────────────────────────────────────
+        // ── Firebase ──────────────────────────────────────────────────
+        const FIREBASE_DB_URL = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const APPS_DB_PATH    = `${FIREBASE_DB_URL}/apps.json`;
 
-        function renderApps() {
+        // Default registry — written to Firebase on first run, then managed from Firebase Console.
+        const DEFAULT_APPS = [
+            { title: 'Kerala Tour',          subtitle: 'Munnar · Alleppey',        icon: 'fa-map-location-dot', gradient: 'linear-gradient(145deg, #1a5c38, #00695c)', href: 'kerala-tour.html',          badge: 'Live' },
+            { title: 'Bengaluru Spotter',    subtitle: 'City spots & hidden gems',  icon: 'fa-location-dot',     gradient: 'linear-gradient(145deg, #1e3a5f, #1a6b8a)', href: 'bengaluru-spotter.html',    badge: 'Live' },
+            { title: 'Food Log',             subtitle: "Adarsh & Himu's diary",     icon: 'fa-utensils',         gradient: 'linear-gradient(145deg, #7c2d12, #ea580c)', href: 'food-log.html',             badge: 'Live' },
+            { title: 'To Do',                subtitle: "Adarsh & Himu's tasks",     icon: 'fa-circle-check',     gradient: 'linear-gradient(145deg, #4c1d95, #7c3aed)', href: 'todo.html',                 badge: 'Live' },
+            { title: 'Vacation Discoveries', subtitle: 'Places from our travels',   icon: 'fa-earth-americas',   gradient: 'linear-gradient(145deg, #312e81, #0d9488)', href: 'vacation-discoveries.html', badge: 'Live' },
+            { title: 'Coming Soon',          subtitle: 'New app on the way',        icon: 'fa-plus',             gradient: null,                                        href: null,                        badge: 'Soon' },
+        ];
+
+        async function loadApps() {
+            try {
+                const res = await fetch(APPS_DB_PATH);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data) {
+                    // Firebase stores arrays as {"0":{...},"1":{...},...} — restore order.
+                    return Object.keys(data).sort((a, b) => Number(a) - Number(b)).map(k => data[k]);
+                }
+                // First run: seed Firebase with defaults.
+                await fetch(APPS_DB_PATH, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(DEFAULT_APPS),
+                });
+                return DEFAULT_APPS;
+            } catch (e) {
+                console.error('Failed to load app registry:', e);
+                return DEFAULT_APPS;
+            }
+        }
+
+        function renderApps(apps) {
             const grid = document.getElementById('app-grid');
             grid.innerHTML = '';
-
-            APPS.forEach((app, i) => {
+            apps.forEach((app, i) => {
                 const isLive    = !!app.href;
                 const isMuted   = !app.gradient;
                 const badgeCls  = isLive ? 'live' : 'soon';
                 const cardCls   = isMuted ? 'app-card dimmed' : 'app-card';
                 const iconCls   = isMuted ? 'card-icon-wrap muted' : 'card-icon-wrap';
                 const iconStyle = app.gradient ? `background:${app.gradient};` : '';
-
                 const card = document.createElement('div');
                 card.className = cardCls;
                 card.style.animationDelay = `${0.28 + i * 0.07}s`;
@@ -470,17 +449,22 @@
                     <div class="card-title">${app.title}</div>
                     ${app.subtitle ? `<div class="card-sub">${app.subtitle}</div>` : ''}
                 `;
-
                 card.addEventListener('click', () => {
-                    if (isLive) {
-                        window.location.href = app.href;
-                    } else {
-                        showToast(`${app.title} — coming soon!`);
-                    }
+                    if (isLive) window.location.href = app.href;
+                    else showToast(`${app.title} — coming soon!`);
                 });
-
                 grid.appendChild(card);
             });
+        }
+
+        function showLoadingGrid() {
+            const grid = document.getElementById('app-grid');
+            grid.innerHTML = Array.from({ length: 6 }, () =>
+                `<div class="app-card dimmed" style="opacity:.4;pointer-events:none">
+                    <div class="card-icon-wrap muted"></div>
+                    <div class="card-title" style="background:rgba(255,255,255,.08);border-radius:6px;height:18px;width:80px;margin:0 auto"></div>
+                </div>`
+            ).join('');
         }
 
         // Toast
@@ -502,11 +486,16 @@
         }
 
         // Init
-        (function init() {
+        async function init() {
             const saved = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', saved);
-            renderApps();
-        })();
+            showLoadingGrid();
+            await window.authReady;
+            const apps = await loadApps();
+            renderApps(apps);
+        }
+
+        init();
     </script>
 </body>
 </html>

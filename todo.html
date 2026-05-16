@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adarsh &amp; Himu's To Do</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="auth.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
     <script>
@@ -510,7 +511,8 @@
         const escHtml     = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
         // ── INIT ──
-        window.onload = () => {
+        window.onload = async () => {
+            await window.authReady;
             buildCatChips();
             fetchData();
             if (isConfigured) setInterval(() => fetchData(false), 15000);
