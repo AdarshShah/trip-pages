@@ -165,7 +165,7 @@
             user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
         }
         .todo-card.pressing { animation: holdPulse .6s ease forwards; border-color: rgba(109,40,217,.28) !important; }
-        .todo-card.snap-back { transition: transform 0.18s cubic-bezier(.2,1.3,.4,1); }
+        .todo-card.snap-back { transition: transform 0.28s cubic-bezier(.2,1.3,.4,1); }
         .todo-card.fly-off   { transition: transform 0.22s cubic-bezier(.55,0,.1,1); }
         .todo-card.overdue-card { border-color: rgba(239,68,68,.2) !important; }
 
@@ -730,6 +730,7 @@
             let isSwiping = false, axisLocked = false, isVertical = false, holdFired = false;
             let longPressTimer = null;
             let thresholdCrossed = false;
+            let swipeThreshold = 0;
 
             const onStart = (e) => {
                 if (e.target.closest('button')) return;
@@ -737,6 +738,7 @@
                 startX = p.clientX; startY = p.clientY;
                 currentX = 0; isSwiping = true; axisLocked = false; isVertical = false; holdFired = false;
                 thresholdCrossed = false;
+                swipeThreshold = outer.offsetWidth * 0.72;
                 card.style.transition = '';
                 card.classList.add('pressing');
                 longPressTimer = setTimeout(() => {
@@ -767,14 +769,14 @@
                 clearTimeout(longPressTimer);
                 card.classList.remove('pressing');
                 currentX = dx;
-                card.style.transform = `translateX(${Math.max(-140, Math.min(140, dx))}px)`;
+                card.style.transform = `translateX(${dx}px)`;
 
-                const pct = Math.min(Math.abs(currentX) / 80, 1);
+                const pct = Math.min(Math.abs(currentX) / swipeThreshold, 1);
                 if (currentX > 0) card.style.background = `rgba(21,128,61,${(pct * 0.1).toFixed(3)})`;
                 else if (currentX < 0) card.style.background = `rgba(239,68,68,${(pct * 0.1).toFixed(3)})`;
                 else card.style.background = '';
 
-                const crossed = Math.abs(currentX) > 80;
+                const crossed = Math.abs(currentX) > swipeThreshold;
                 if (crossed && !thresholdCrossed) navigator.vibrate && navigator.vibrate(12);
                 thresholdCrossed = crossed;
 
@@ -788,17 +790,17 @@
                 if (!isSwiping || holdFired) { isSwiping = false; return; }
                 isSwiping = false;
 
-                if (currentX > 80) {
+                if (currentX > swipeThreshold) {
                     navigator.vibrate && navigator.vibrate([8, 20, 12]);
                     animateOut(outer, card, 1, () => markComplete(id));
-                } else if (currentX < -80) {
+                } else if (currentX < -swipeThreshold) {
                     navigator.vibrate && navigator.vibrate([8, 20, 12]);
                     animateOut(outer, card, -1, () => deleteTodo(id));
                 } else {
                     if (Math.abs(currentX) > 20) navigator.vibrate && navigator.vibrate(5);
                     card.classList.add('snap-back');
                     card.style.transform = 'translateX(0)';
-                    card.addEventListener('transitionend', () => card.classList.remove('snap-back'), { once: true });
+                    card.addEventListener('transitionend', () => { card.classList.remove('snap-back'); card.style.background = ''; }, { once: true });
                 }
             };
 
