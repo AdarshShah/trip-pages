@@ -139,7 +139,7 @@
         letter-spacing: 0.04em; text-transform: uppercase;
     }
     #auth-user-badge {
-        position: fixed; bottom: 14px; right: 14px; z-index: 8888;
+        position: fixed; bottom: 14px; left: 14px; z-index: 8888;
         background: rgba(255,255,255,0.045);
         border: 1px solid rgba(255,255,255,0.08);
         border-radius: 999px;
