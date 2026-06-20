@@ -305,6 +305,10 @@
                         style="background:linear-gradient(135deg,#047857,#059669);">
                     <i class="fa-solid fa-plus mr-1.5"></i> Add Expense
                 </button>
+                <button type="button" id="btn-delete" onclick="deleteFromModal()" style="display:none;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;"
+                        class="w-full mt-2.5 py-3 rounded-xl font-bold text-sm transition-all active:scale-95">
+                    <i class="fa-solid fa-trash-can mr-1.5"></i> Delete Expense
+                </button>
             </form>
         </div>
     </div>
@@ -859,6 +863,7 @@
             document.getElementById('modal-eyebrow').textContent = 'New Expense';
             document.getElementById('modal-title').textContent   = 'Log an expense';
             document.getElementById('btn-submit').innerHTML      = '<i class="fa-solid fa-plus mr-1.5"></i> Add Expense';
+            document.getElementById('btn-delete').style.display  = 'none';
             buildCatChips();
             resetWhoCards();
             document.getElementById('form-date').value = todayStr();
@@ -877,6 +882,7 @@
             document.getElementById('modal-eyebrow').textContent = 'Edit Expense';
             document.getElementById('modal-title').textContent   = 'Edit expense';
             document.getElementById('btn-submit').innerHTML      = '<i class="fa-solid fa-check mr-1.5"></i> Save Changes';
+            document.getElementById('btn-delete').style.display  = '';
 
             document.getElementById('form-amount').value = entry.amount ?? '';
             document.getElementById('form-note').value   = entry.note || '';
@@ -889,6 +895,13 @@
 
             _modalOpenedAt = Date.now();
             document.getElementById('add-form-modal').style.display = 'flex';
+        };
+
+        window.deleteFromModal = async () => {
+            const id = editingId;
+            if (!id) return;
+            await window.deleteEntry(id);   // includes a confirm() prompt
+            if (!budgetData[id]) closeModal();   // close only if it was actually deleted
         };
 
         window.closeModal = () => {
