@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Documents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="auth.js"></script>
+    <script src="drive-auth.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0c0f14;
+            --surface: rgba(255,255,255,0.045);
+            --surface-hover: rgba(255,255,255,0.085);
+            --border: rgba(255,255,255,0.08);
+            --border-hover: rgba(255,255,255,0.18);
+            --text-primary: #f0ede8;
+            --text-secondary: rgba(240,237,232,0.45);
+            --text-tertiary: rgba(240,237,232,0.25);
+            --toast-bg: rgba(20,24,32,0.96);
+            --toggle-bg: rgba(255,255,255,0.07);
+            --toggle-icon: #f0ede8;
+            --input-bg: rgba(255,255,255,0.05);
+        }
+        [data-theme="light"] {
+            --bg: #f2efe9;
+            --surface: rgba(255,255,255,0.72);
+            --surface-hover: rgba(255,255,255,0.95);
+            --border: rgba(0,0,0,0.07);
+            --border-hover: rgba(0,0,0,0.15);
+            --text-primary: #1a1814;
+            --text-secondary: rgba(26,24,20,0.45);
+            --text-tertiary: rgba(26,24,20,0.25);
+            --toast-bg: rgba(26,24,20,0.94);
+            --toggle-bg: rgba(0,0,0,0.07);
+            --toggle-icon: #1a1814;
+            --input-bg: rgba(0,0,0,0.03);
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+        .bg-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+        [data-theme="dark"] .bg-scene {
+            background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(16,32,24,0.9) 0%, transparent 70%),
+                        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(10,18,32,0.8) 0%, transparent 65%),
+                        linear-gradient(160deg, #090c10 0%, #0c1118 40%, #0a0e0c 100%);
+        }
+        [data-theme="light"] .bg-scene {
+            background: radial-gradient(ellipse 80% 60% at 20% 10%, rgba(225,235,225,0.9) 0%, transparent 70%),
+                        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(215,225,240,0.8) 0%, transparent 65%),
+                        linear-gradient(160deg, #ede9e3 0%, #f2efe9 50%, #eae8e3 100%);
+        }
+        .orb { position:absolute; border-radius:50%; filter:blur(90px); animation: driftOrb var(--dur,18s) ease-in-out infinite alternate; opacity: var(--op,0.18); }
+        @keyframes driftOrb {
+            0%   { transform: translate(0,0) scale(1); }
+            33%  { transform: translate(var(--dx1,40px),var(--dy1,-30px)) scale(1.08); }
+            66%  { transform: translate(var(--dx2,-20px),var(--dy2,20px)) scale(0.94); }
+            100% { transform: translate(var(--dx3,30px),var(--dy3,10px)) scale(1.04); }
+        }
+        .page-wrap { position:relative; z-index:1; max-width:720px; margin:0 auto; padding:0 24px 80px; }
+        .theme-toggle {
+            position:fixed; top:24px; right:24px; z-index:100;
+            width:40px; height:40px; border-radius:50%;
+            border:1px solid var(--border); background:var(--toggle-bg); color:var(--toggle-icon);
+            display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;
+            transition: background .25s ease, transform .2s ease; backdrop-filter: blur(12px);
+        }
+        .theme-toggle:hover { background: var(--surface-hover); transform: scale(1.08); }
+        .back-link {
+            position:fixed; top:24px; left:24px; z-index:100;
+            width:40px; height:40px; border-radius:50%;
+            border:1px solid var(--border); background:var(--toggle-bg); color:var(--toggle-icon);
+            display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;
+            text-decoration:none; backdrop-filter: blur(12px); transition: background .25s ease, transform .2s ease;
+        }
+        .back-link:hover { background: var(--surface-hover); transform: scale(1.08); }
+        .header { padding-top:72px; padding-bottom:36px; }
+        .header-eyebrow { font-size:10px; font-weight:600; letter-spacing:.22em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:10px; }
+        .header-title { font-family:'Cormorant Garamond',serif; font-size:clamp(42px,9vw,60px); font-weight:600; line-height:.95; letter-spacing:-.02em; color:var(--text-primary); }
+        .header-title em { font-style:italic; font-weight:400; }
+        .header-sub { margin-top:12px; font-size:13px; color:var(--text-secondary); line-height:1.6; }
+
+        .vault-card {
+            border-radius:24px; border:1px solid var(--border); background:var(--surface);
+            backdrop-filter: blur(20px); padding:22px;
+        }
+        .field-label { font-size:9px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:6px; display:block; }
+        .field-input {
+            width:100%; padding:10px 12px; border-radius:12px; font-size:13px;
+            background: var(--input-bg); border:1px solid var(--border); color:var(--text-primary);
+            transition: border-color .2s ease;
+        }
+        .field-input:focus { outline:none; border-color: var(--border-hover); }
+        select.field-input { appearance:none; cursor:pointer; }
+
+        .btn-primary {
+            width:100%; padding:12px; border-radius:12px; font-weight:600; font-size:13px;
+            color:#0c1118; background: linear-gradient(135deg,#67e8f9,#22d3ee);
+            border:none; cursor:pointer; transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(34,211,238,.25); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+
+        .connect-banner {
+            border-radius:20px; border:1px dashed var(--border-hover); background:var(--surface);
+            padding:20px; text-align:center; margin-bottom:24px;
+        }
+
+        .tab-btn {
+            font-size:11px; font-weight:600; padding:7px 14px; border-radius:100px;
+            border:1px solid var(--border); background:transparent; color:var(--text-secondary);
+            cursor:pointer; transition: all .18s ease; white-space:nowrap;
+        }
+        .tab-btn.active { background: var(--text-primary); color: var(--bg); border-color: var(--text-primary); }
+
+        .badge-chip { font-size:9px; font-weight:700; padding:3px 9px; border-radius:100px; letter-spacing:.03em; white-space:nowrap; }
+
+        .file-row {
+            display:flex; align-items:center; gap:12px; padding:14px 16px;
+            border-radius:16px; border:1px solid var(--border); background:var(--surface);
+            margin-bottom:10px; transition: background .18s ease, border-color .18s ease;
+        }
+        .file-row:hover { background: var(--surface-hover); border-color: var(--border-hover); }
+        .file-icon { width:32px; height:32px; flex-shrink:0; }
+        .file-action-btn {
+            width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+            color: var(--text-tertiary); background:transparent; border:none; cursor:pointer; transition: all .15s ease;
+        }
+        .file-action-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .file-action-btn.danger:hover { color:#f87171; }
+
+        .empty-state { text-align:center; padding:48px 16px; color: var(--text-tertiary); }
+
+        .toast {
+            position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px);
+            background:var(--toast-bg); color:var(--text-primary); border:1px solid var(--border-hover);
+            border-radius:100px; padding:12px 22px; font-size:12px; font-weight:500; z-index:999;
+            white-space:nowrap; transition: transform .35s cubic-bezier(.34,1.4,.64,1), opacity .3s ease; opacity:0;
+        }
+        .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+    </style>
+</head>
+<body>
+    <div class="bg-scene">
+        <div class="orb" style="width:500px;height:500px;top:-100px;left:-150px;background:radial-gradient(circle,#0e3a45,transparent);--dur:22s;--op:0.22;"></div>
+        <div class="orb" style="width:400px;height:400px;bottom:-80px;right:-100px;background:radial-gradient(circle,#3a2e0e,transparent);--dur:26s;--op:0.16;"></div>
+    </div>
+
+    <a href="index.html" class="back-link" title="Back to My Apps"><i class="fa-solid fa-arrow-left"></i></a>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i class="fa-solid fa-circle-half-stroke"></i></button>
+    <div class="toast" id="toast"></div>
+
+    <div class="page-wrap">
+        <div class="header">
+            <p class="header-eyebrow">Personal Hub</p>
+            <h1 class="header-title">Trip <em>Documents</em></h1>
+            <p class="header-sub">Tickets, bookings, passports, insurance — stored in your own Google Drive, linked to the itinerary entries they belong to.</p>
+        </div>
+
+        <!-- Connect banner -->
+        <div class="connect-banner" id="connect-banner" style="display:none;">
+            <i class="fa-brands fa-google-drive text-2xl mb-3" style="color:#22d3ee;"></i>
+            <p class="text-sm font-semibold mb-1">Connect Google Drive</p>
+            <p class="text-xs mb-4" style="color:var(--text-secondary);">Documents are stored only in your Drive — never in Firebase or this repo.</p>
+            <button class="btn-primary" style="max-width:260px;margin:0 auto;" onclick="handleConnect()">
+                <i class="fa-brands fa-google mr-1.5"></i>Connect
+            </button>
+            <p class="text-[10px] mt-3" style="color:var(--text-tertiary);" id="connect-error"></p>
+        </div>
+
+        <!-- Upload card -->
+        <div class="vault-card mb-6" id="upload-card" style="display:none;">
+            <p class="text-[10px] font-bold uppercase tracking-widest mb-4" style="color:var(--text-tertiary);"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Upload a Document</p>
+            <div class="space-y-3">
+                <div>
+                    <label class="field-label">File</label>
+                    <input type="file" id="upload-file" class="field-input">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="field-label">Trip</label>
+                        <select id="upload-trip" class="field-input" onchange="populateLinkSelect()">
+                            <option value="thailand">Thailand</option>
+                            <option value="kerala">Kerala</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">Category</label>
+                        <select id="upload-category" class="field-input">
+                            <option>Passport/Visa</option>
+                            <option selected>Flights</option>
+                            <option>Hotels</option>
+                            <option>Insurance</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label">Link to itinerary entry <span style="text-transform:none;font-weight:400;opacity:.7;">(optional)</span></label>
+                    <select id="upload-link" class="field-input">
+                        <option value="">— No specific entry —</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="handleUpload(this)"><i class="fa-solid fa-upload mr-1.5"></i>Upload to Drive</button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3" id="filter-bar" style="display:none;">
+            <div class="flex gap-2 flex-wrap" id="trip-tabs">
+                <button class="tab-btn active" data-trip="all" onclick="setTripFilter('all')">All</button>
+                <button class="tab-btn" data-trip="thailand" onclick="setTripFilter('thailand')">Thailand</button>
+                <button class="tab-btn" data-trip="kerala" onclick="setTripFilter('kerala')">Kerala</button>
+                <button class="tab-btn" data-trip="general" onclick="setTripFilter('general')">General</button>
+            </div>
+            <select id="category-filter" class="field-input" style="width:auto;padding:7px 12px;font-size:11px;" onchange="refreshFiles()">
+                <option value="">All Categories</option>
+                <option>Passport/Visa</option>
+                <option>Flights</option>
+                <option>Hotels</option>
+                <option>Insurance</option>
+                <option>Other</option>
+            </select>
+        </div>
+
+        <div id="file-list"></div>
+    </div>
+
+    <script>
+        const FIREBASE_DB_URL = 'https://my-app-d7de4-default-rtdb.asia-southeast1.firebasedatabase.app';
+        const ITINERARY_PATHS = { thailand: '/thailand_itinerary', kerala: '/itinerary' };
+
+        const CATS = {
+            'Passport/Visa': { color:'#6366f1', icon:'fa-passport' },
+            'Flights':       { color:'#0e7490', icon:'fa-plane' },
+            'Hotels':        { color:'#0ea5e9', icon:'fa-hotel' },
+            'Insurance':     { color:'#16a34a', icon:'fa-shield-heart' },
+            'Other':         { color:'#64748b', icon:'fa-file' }
+        };
+        const TRIPS = {
+            thailand: { label:'Thailand', color:'#0e7490' },
+            kerala:   { label:'Kerala',   color:'#2d7a4d' },
+            general:  { label:'General',  color:'#64748b' }
+        };
+
+        let itineraryCache = { thailand: [], kerala: [] };
+        let tripFilter = 'all';
+
+        // Theme
+        function toggleTheme() {
+            const html = document.documentElement;
+            const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+
+        // Toast
+        let toastTimer;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+        }
+
+        async function loadItineraries() {
+            for (const [trip, path] of Object.entries(ITINERARY_PATHS)) {
+                try {
+                    const res = await fetch(`${FIREBASE_DB_URL}${path}.json`);
+                    const data = await res.json();
+                    itineraryCache[trip] = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+                } catch (_) { itineraryCache[trip] = []; }
+            }
+            populateLinkSelect();
+        }
+
+        function populateLinkSelect() {
+            const trip = document.getElementById('upload-trip').value;
+            const sel  = document.getElementById('upload-link');
+            const items = (itineraryCache[trip] || []).slice()
+                .sort((a, b) => new Date(`${a.date}T${a.time || '00:00'}`) - new Date(`${b.date}T${b.time || '00:00'}`));
+            sel.innerHTML = '<option value="">— No specific entry —</option>' +
+                items.map(i => `<option value="${i.id}" data-title="${(i.title || '').replace(/"/g, '&quot;')}">${i.date} • ${i.title}</option>`).join('');
+        }
+
+        // ── Drive connection ──
+        async function handleConnect(silent = false) {
+            const errEl = document.getElementById('connect-error');
+            errEl.textContent = '';
+            try {
+                await window.driveConnect({ silent });
+                document.getElementById('connect-banner').style.display = 'none';
+                document.getElementById('upload-card').style.display = 'block';
+                document.getElementById('filter-bar').style.display = 'flex';
+                refreshFiles();
+            } catch (e) {
+                if (!silent) errEl.textContent = e.message;
+                document.getElementById('connect-banner').style.display = 'block';
+            }
+        }
+
+        function setTripFilter(t) {
+            tripFilter = t;
+            document.querySelectorAll('#trip-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.trip === t));
+            refreshFiles();
+        }
+
+        async function refreshFiles() {
+            const listEl = document.getElementById('file-list');
+            if (!window.driveIsConnected()) return;
+            listEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p class="text-xs">Loading…</p></div>`;
+            try {
+                const category = document.getElementById('category-filter').value;
+                const filter = {};
+                if (tripFilter !== 'all') filter.trip = tripFilter;
+                if (category) filter.category = category;
+                const files = await window.driveListFiles(filter);
+                renderFiles(files);
+            } catch (e) {
+                listEl.innerHTML = `<div class="empty-state"><p class="text-xs">Couldn't load files: ${e.message}</p></div>`;
+            }
+        }
+
+        function renderFiles(files) {
+            const listEl = document.getElementById('file-list');
+            if (!files.length) {
+                listEl.innerHTML = `<div class="empty-state"><i class="fa-regular fa-folder-open text-2xl mb-2"></i><p class="text-xs">No documents yet — upload one above.</p></div>`;
+                return;
+            }
+            listEl.innerHTML = files.map(f => {
+                const props = f.appProperties || {};
+                const cat   = CATS[props.category] || CATS['Other'];
+                const trip  = TRIPS[props.trip] || TRIPS['general'];
+                const linkChip = props.linkedEventId
+                    ? `<span class="badge-chip" style="background:${cat.color}18;color:${cat.color};"><i class="fa-solid fa-link mr-1"></i>${(props.linkedEventTitle || 'Linked entry').slice(0, 28)}</span>`
+                    : '';
+                return `
+                <div class="file-row">
+                    <img src="${f.iconLink}" class="file-icon" alt="">
+                    <div class="flex-1 min-w-0">
+                        <a href="${f.webViewLink}" target="_blank" rel="noopener" class="text-sm font-semibold truncate block hover:underline">${f.name}</a>
+                        <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                            <span class="badge-chip" style="background:${cat.color}18;color:${cat.color};"><i class="fa-solid ${cat.icon} mr-1"></i>${props.category || 'Other'}</span>
+                            <span class="badge-chip" style="background:${trip.color}18;color:${trip.color};">${trip.label}</span>
+                            ${linkChip}
+                            <span class="text-[10px]" style="color:var(--text-tertiary);">${window.driveFormatSize(f.size)}</span>
+                        </div>
+                    </div>
+                    ${props.linkedEventId ? `<button class="file-action-btn" title="Unlink from entry" onclick="unlinkFile('${f.id}')"><i class="fa-solid fa-link-slash text-xs"></i></button>` : ''}
+                    <button class="file-action-btn danger" title="Delete" onclick="deleteFile('${f.id}', ${JSON.stringify(f.name)})"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                </div>`;
+            }).join('');
+        }
+
+        window.unlinkFile = async (fileId) => {
+            await window.driveUnlinkFile(fileId);
+            showToast('Unlinked from entry');
+            refreshFiles();
+        };
+
+        window.deleteFile = async (fileId, name) => {
+            if (!confirm(`Delete "${name}" from Google Drive? This cannot be undone.`)) return;
+            await window.driveDeleteFile(fileId);
+            showToast('Deleted');
+            refreshFiles();
+        };
+
+        window.handleUpload = async (btn) => {
+            const fileInput = document.getElementById('upload-file');
+            const file = fileInput.files[0];
+            if (!file) { showToast('Choose a file first'); return; }
+            const trip     = document.getElementById('upload-trip').value;
+            const category = document.getElementById('upload-category').value;
+            const linkSel  = document.getElementById('upload-link');
+            const linkedEventId    = linkSel.value;
+            const linkedEventTitle = linkSel.selectedOptions[0]?.dataset.title || '';
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Uploading…';
+            try {
+                await window.driveUploadFile(file, { trip, category, linkedEventId, linkedEventTitle });
+                fileInput.value = '';
+                showToast('Uploaded to Drive');
+                refreshFiles();
+            } catch (e) {
+                showToast('Upload failed: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-upload mr-1.5"></i>Upload to Drive';
+            }
+        };
+
+        async function init() {
+            const saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            await window.authReady;
+            await loadItineraries();
+            document.getElementById('connect-banner').style.display = 'block';
+            await handleConnect(true); // try silent reconnect first
+        }
+        init();
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@
     <title>Adarsh & Himu: The Bangkok–Koh Samui Getaway</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="auth.js"></script>
+    <script src="drive-auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;800&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
@@ -251,6 +252,20 @@
         .text-shadow { text-shadow: 0 2px 16px rgba(0,0,0,.4); }
         .input-focus { transition: border-color .2s, box-shadow .2s; }
         .input-focus:focus { border-color:#0e7490; box-shadow: 0 0 0 3px rgba(14,116,144,.12); outline:none; }
+
+        /* ── DOCUMENT CHIPS ── */
+        .doc-chip {
+            display:inline-flex; align-items:center; gap:4px;
+            font-size:9px; font-weight:700; padding:3px 8px;
+            border-radius:100px; background:#f8fafc; border:1px solid #e2e8f0;
+            color:#475569; text-decoration:none; transition: background .15s ease;
+            max-width:120px;
+        }
+        .doc-chip img { width:11px; height:11px; flex-shrink:0; }
+        .doc-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .doc-chip:hover { background:#f1f5f9; }
+        .doc-chip-add { color:#0e7490; border-color:#0e749033; background:#ecfeff; cursor:pointer; }
+        .doc-chip-add:hover { background:#cffafe; }
     </style>
 </head>
 <body class="font-sans text-gray-800 flex flex-col items-center p-0 sm:p-4 min-h-screen relative">
@@ -387,6 +402,24 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ═══ ATTACH DOCUMENT MODAL ═══ -->
+    <div id="attach-modal" class="fixed inset-0 z-[100] items-center justify-center p-4" style="display:none;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);" onclick="handleAttachBackdrop(event)">
+        <div class="modal-sheet glass-card w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden">
+            <div class="px-6 pt-6 pb-4" style="background:linear-gradient(135deg,#ecfeff,#fff);">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-[.18em] mb-0.5">Attach Document</p>
+                        <h2 class="text-lg font-serif truncate max-w-[220px]" style="color:#0c4a6e" id="attach-modal-title">Event</h2>
+                    </div>
+                    <button onclick="closeAttachModal()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shadow-sm flex-shrink-0">
+                        <i class="fa-solid fa-times text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 pb-6 pt-4" id="attach-modal-body"></div>
         </div>
     </div>
 
@@ -599,6 +632,7 @@
             startCountdown();
             setupForm();
             setInterval(() => fetchData(false), 15000);
+            try { await window.driveConnect({ silent: true }); } catch (_) { /* not connected yet — user can connect via the attach modal */ }
         };
 
         // ── FETCH ──
@@ -755,6 +789,7 @@
                                     <span id="inr-${item.id}" class="text-[8px] text-gray-400 font-semibold mt-0.5">${fmtINR(item.cost || 0)}</span>
                                 </div>
                             </div>
+                            <div class="mt-2 flex items-center gap-1.5 flex-wrap" id="docs-${item.id}"></div>
                         </div>`;
                     // Long-press to edit
                     const cb = card.querySelector('.event-card-body');
@@ -787,6 +822,7 @@
                     card.addEventListener('mouseleave',  _pe);
                     card.addEventListener('contextmenu', e => e.preventDefault());
                     container.appendChild(card);
+                    renderDocChips(item.id);
                     idx++;
                 });
             });
@@ -810,6 +846,102 @@
         window.deleteItem = (id) => {
             itineraryData = itineraryData.filter(x => x.id !== id);
             saveData();
+        };
+
+        // ── DOCUMENT ATTACHMENTS (Google Drive) ──
+        let attachItemId = null;
+
+        async function renderDocChips(itemId) {
+            const el = document.getElementById(`docs-${itemId}`);
+            if (!el) return;
+            const attachBtn = `<button onclick="openAttachModal('${itemId}')" class="doc-chip doc-chip-add"><i class="fa-solid fa-paperclip"></i><span>Attach</span></button>`;
+            if (!window.driveIsConnected || !window.driveIsConnected()) {
+                el.innerHTML = attachBtn;
+                return;
+            }
+            try {
+                const files = await window.driveListFiles({ trip: 'thailand', linkedEventId: itemId });
+                el.innerHTML = files.map(f => `
+                    <a href="${f.webViewLink}" target="_blank" rel="noopener" class="doc-chip" title="${f.name}">
+                        <img src="${f.iconLink}" alt=""><span>${f.name}</span>
+                    </a>`).join('') + attachBtn;
+            } catch (_) {
+                el.innerHTML = attachBtn;
+            }
+        }
+
+        window.openAttachModal = (itemId) => {
+            attachItemId = itemId;
+            const item = itineraryData.find(x => x.id === itemId);
+            document.getElementById('attach-modal-title').innerText = item ? item.title : 'Attach Document';
+            renderAttachModalBody();
+            document.getElementById('attach-modal').style.display = 'flex';
+        };
+        window.closeAttachModal = () => { document.getElementById('attach-modal').style.display = 'none'; attachItemId = null; };
+        window.handleAttachBackdrop = (e) => {
+            if (e.target === document.getElementById('attach-modal')) closeAttachModal();
+        };
+
+        function renderAttachModalBody() {
+            const body = document.getElementById('attach-modal-body');
+            if (!window.driveIsConnected || !window.driveIsConnected()) {
+                body.innerHTML = `
+                    <p class="text-xs text-gray-500 mb-4">Connect Google Drive to attach tickets, bookings, or bills to this event. Files are stored only in your Drive.</p>
+                    <button onclick="connectDriveFromModal()" class="w-full py-3 rounded-xl font-bold text-sm text-white" style="background:linear-gradient(135deg,#0e7490,#0c4a6e);">
+                        <i class="fa-brands fa-google mr-1.5"></i>Connect Google Drive
+                    </button>
+                    <p class="text-[10px] text-gray-400 mt-2" id="attach-connect-error"></p>`;
+                return;
+            }
+            body.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">File</label>
+                        <input type="file" id="attach-file-input" class="w-full text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
+                        <select id="attach-category-select" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm input-focus">
+                            <option>Passport/Visa</option>
+                            <option selected>Flights</option>
+                            <option>Hotels</option>
+                            <option>Insurance</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <button onclick="submitAttach(this)" class="w-full py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95" style="background:linear-gradient(135deg,#0e7490,#0c4a6e);">
+                        <i class="fa-solid fa-upload mr-1.5"></i>Upload
+                    </button>
+                </div>`;
+        }
+
+        window.connectDriveFromModal = async () => {
+            try {
+                await window.driveConnect();
+                renderAttachModalBody();
+            } catch (e) {
+                const err = document.getElementById('attach-connect-error');
+                if (err) err.textContent = e.message;
+            }
+        };
+
+        window.submitAttach = async (btn) => {
+            const fileInput = document.getElementById('attach-file-input');
+            const file = fileInput.files[0];
+            if (!file) { flashInvalid(fileInput); return; }
+            const category = document.getElementById('attach-category-select').value;
+            const item = itineraryData.find(x => x.id === attachItemId);
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Uploading…';
+            try {
+                await window.driveUploadFile(file, { trip: 'thailand', category, linkedEventId: attachItemId, linkedEventTitle: item?.title || '' });
+                closeAttachModal();
+                renderDocChips(attachItemId);
+            } catch (e) {
+                alert('Upload failed: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-upload mr-1.5"></i>Upload';
+            }
         };
 
         // ── STEP NAVIGATION ──
