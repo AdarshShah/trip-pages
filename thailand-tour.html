@@ -632,7 +632,6 @@
             startCountdown();
             setupForm();
             setInterval(() => fetchData(false), 15000);
-            try { await window.driveConnect({ silent: true }); } catch (_) { /* not connected yet — user can connect via the attach modal */ }
         };
 
         // ── FETCH ──
@@ -856,7 +855,10 @@
             if (!el) return;
             const attachBtn = `<button onclick="openAttachModal('${itemId}')" class="doc-chip doc-chip-add"><i class="fa-solid fa-paperclip"></i><span>Attach</span></button>`;
             if (!window.driveIsConnected || !window.driveIsConnected()) {
-                el.innerHTML = attachBtn;
+                // Distinct from "Attach" — the access token doesn't survive a refresh, so this is
+                // a reconnect prompt, not "no files exist". Needs a real click (user gesture) so
+                // the browser doesn't block the OAuth popup the way it blocks silent reconnects.
+                el.innerHTML = `<button onclick="reconnectDriveChips()" class="doc-chip doc-chip-add" style="color:#b45309;background:#fffbeb;border-color:#fde68a;"><i class="fa-solid fa-rotate"></i><span>Connect Drive to view</span></button>`;
                 return;
             }
             try {
@@ -869,6 +871,15 @@
                 el.innerHTML = attachBtn;
             }
         }
+
+        window.reconnectDriveChips = async () => {
+            try {
+                await window.driveConnect();
+                itineraryData.forEach(it => renderDocChips(it.id));
+            } catch (e) {
+                alert('Drive connection failed: ' + e.message);
+            }
+        };
 
         window.openAttachModal = (itemId) => {
             attachItemId = itemId;

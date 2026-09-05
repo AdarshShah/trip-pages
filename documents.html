@@ -406,7 +406,6 @@
             await window.authReady;
             await loadItineraries();
             document.getElementById('connect-banner').style.display = 'block';
-            await handleConnect(true); // try silent reconnect first
         }
         init();
     </script>
